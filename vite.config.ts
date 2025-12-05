@@ -5,7 +5,7 @@
 
   export default defineConfig({
     plugins: [react()],
-    base: 'Aavas', // Replace with your actual repo name
+    base: '/Aavas/', // Must have forward slashes for GitHub Pages
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
