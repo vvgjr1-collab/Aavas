@@ -1,5 +1,5 @@
 
-  # UX Module RentRight App (Copy)
+  # Aavas App
 
   This is a code bundle for UX Module RentRight App (Copy). The original project is available at https://www.figma.com/design/0YHt57AOs5j6OOK3cj9b23/UX-Module-RentRight-App--Copy-.
 
