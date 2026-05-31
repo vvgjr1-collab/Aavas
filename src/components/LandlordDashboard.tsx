@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { 
+import React, { useState } from "react";
+import { motion } from "motion/react";
+import {
   Plus,
   Building2,
   Home,
@@ -26,20 +26,48 @@ import {
   Car,
   Zap,
   Droplets,
-  LogOut
-} from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Separator } from './ui/separator';
-import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { toast } from 'sonner@2.0.3';
-import logoImage from 'figma:asset/5552fb9550c2859aaeadad56af03cd7adcd56e69.png';
+  LogOut,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Separator } from "./ui/separator";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { toast } from "sonner@2.0.3";
+import logoImage from "figma:asset/5552fb9550c2859aaeadad56af03cd7adcd56e69.png";
 
 interface LandlordDashboardProps {
   userName: string;
@@ -47,7 +75,10 @@ interface LandlordDashboardProps {
   properties: Property[];
   onNavigateToPropertyListing: () => void;
   onNavigateToPropertyManagement: (property: PropertyData) => void;
-  onUpdateProperty: (propertyId: string, updatedData: Partial<Property>) => void;
+  onUpdateProperty: (
+    propertyId: string,
+    updatedData: Partial<Property>
+  ) => void;
   onDeleteProperty: (propertyId: string) => void;
   onBack: () => void;
 }
@@ -69,13 +100,13 @@ interface Property {
   id: string;
   title: string;
   address: string;
-  type: 'apartment' | 'house' | 'villa' | 'studio';
+  type: "apartment" | "house" | "villa" | "studio";
   rent: number;
   deposit: number;
   bedrooms: number;
   bathrooms: number;
   area: number;
-  status: 'occupied' | 'vacant' | 'maintenance';
+  status: "occupied" | "vacant" | "maintenance";
   tenant?: {
     name: string;
     email: string;
@@ -89,44 +120,65 @@ interface Property {
   lastUpdated: string;
 }
 
-export function LandlordDashboard({ userName, userEmail, properties, onNavigateToPropertyListing, onNavigateToPropertyManagement, onUpdateProperty, onDeleteProperty, onBack }: LandlordDashboardProps) {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'occupied' | 'vacant' | 'maintenance'>('all');
+export function LandlordDashboard({
+  userName,
+  userEmail,
+  properties,
+  onNavigateToPropertyListing,
+  onNavigateToPropertyManagement,
+  onUpdateProperty,
+  onDeleteProperty,
+  onBack,
+}: LandlordDashboardProps) {
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "occupied" | "vacant" | "maintenance"
+  >("all");
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [deletePropertyId, setDeletePropertyId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<Property>>({});
 
-  const filteredProperties = properties.filter(property => 
-    filterStatus === 'all' || property.status === filterStatus
+  const filteredProperties = properties.filter(
+    (property) => filterStatus === "all" || property.status === filterStatus
   );
 
   const stats = {
     totalProperties: properties.length,
-    occupiedProperties: properties.filter(p => p.status === 'occupied').length,
-    vacantProperties: properties.filter(p => p.status === 'vacant').length,
+    occupiedProperties: properties.filter((p) => p.status === "occupied")
+      .length,
+    vacantProperties: properties.filter((p) => p.status === "vacant").length,
     monthlyRevenue: properties
-      .filter(p => p.status === 'occupied')
-      .reduce((sum, p) => sum + p.rent, 0)
+      .filter((p) => p.status === "occupied")
+      .reduce((sum, p) => sum + p.rent, 0),
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'occupied': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-      case 'vacant': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
-      case 'maintenance': return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
-      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300';
+      case "occupied":
+        return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
+      case "vacant":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
+      case "maintenance":
+        return "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300";
+      default:
+        return "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300";
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'apartment': return Building2;
-      case 'house': return Home;
-      case 'villa': return Home;
-      case 'studio': return Building2;
-      default: return Home;
+      case "apartment":
+        return Building2;
+      case "house":
+        return Home;
+      case "villa":
+        return Home;
+      case "studio":
+        return Building2;
+      default:
+        return Home;
     }
   };
 
@@ -139,7 +191,7 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
       status: property.status,
       bedrooms: property.bedrooms,
       bathrooms: property.bathrooms,
-      area: property.area
+      area: property.area,
     });
     setIsEditDialogOpen(true);
   };
@@ -147,7 +199,7 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
   const handleEditSave = () => {
     if (editingProperty && editFormData) {
       onUpdateProperty(editingProperty.id, editFormData);
-      toast.success('Property updated successfully!');
+      toast.success("Property updated successfully!");
       setIsEditDialogOpen(false);
       setEditingProperty(null);
       setEditFormData({});
@@ -162,7 +214,7 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
   const handleDeleteConfirm = () => {
     if (deletePropertyId) {
       onDeleteProperty(deletePropertyId);
-      toast.success('Property deleted successfully!');
+      toast.success("Property deleted successfully!");
       setIsDeleteDialogOpen(false);
       setDeletePropertyId(null);
     }
@@ -194,7 +246,9 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
           <div>
             <div className="flex items-center gap-2 mb-1">
               <img src={logoImage} alt="Aavas" className="h-6" />
-              <span className="text-xl text-[#2e3a8c] dark:text-[#4a5bb0] font-aavas">Aavas</span>
+              <span className="text-xl text-[#2e3a8c] dark:text-[#4a5bb0] font-aavas">
+                Aavas
+              </span>
             </div>
             <h1 className="text-[#2e3a8c] dark:text-[#4a5bb0]">
               Property Portfolio
@@ -227,8 +281,12 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                 <Building2 className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Properties</p>
-                <p className="text-2xl text-[#2e3a8c] dark:text-[#4a5bb0]">{stats.totalProperties}</p>
+                <p className="text-sm text-muted-foreground">
+                  Total Properties
+                </p>
+                <p className="text-2xl text-[#2e3a8c] dark:text-[#4a5bb0]">
+                  {stats.totalProperties}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -242,7 +300,9 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Occupied</p>
-                <p className="text-2xl text-green-700 dark:text-green-300">{stats.occupiedProperties}</p>
+                <p className="text-2xl text-green-700 dark:text-green-300">
+                  {stats.occupiedProperties}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -256,7 +316,9 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Vacant</p>
-                <p className="text-2xl text-blue-700 dark:text-blue-300">{stats.vacantProperties}</p>
+                <p className="text-2xl text-blue-700 dark:text-blue-300">
+                  {stats.vacantProperties}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -270,7 +332,9 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Monthly Revenue</p>
-                <p className="text-2xl text-purple-700 dark:text-purple-300">₹{stats.monthlyRevenue.toLocaleString()}</p>
+                <p className="text-2xl text-purple-700 dark:text-purple-300">
+                  ₹{stats.monthlyRevenue.toLocaleString()}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -284,20 +348,29 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
         transition={{ delay: 0.3, duration: 0.5 }}
         className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0"
       >
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           {[
-            { key: 'all', label: 'All Properties', count: properties.length },
-            { key: 'occupied', label: 'Occupied', count: stats.occupiedProperties },
-            { key: 'vacant', label: 'Vacant', count: stats.vacantProperties },
-            { key: 'maintenance', label: 'Maintenance', count: properties.filter(p => p.status === 'maintenance').length }
+            { key: "all", label: "All Properties", count: properties.length },
+            {
+              key: "occupied",
+              label: "Occupied",
+              count: stats.occupiedProperties,
+            },
+            { key: "vacant", label: "Vacant", count: stats.vacantProperties },
+            {
+              key: "maintenance",
+              label: "Maintenance",
+              count: properties.filter((p) => p.status === "maintenance")
+                .length,
+            },
           ].map((filter) => (
             <Button
               key={filter.key}
               variant={filterStatus === filter.key ? "default" : "ghost"}
               className={`${
-                filterStatus === filter.key 
-                  ? 'bg-[#2e3a8c] hover:bg-[#1f2861] text-white' 
-                  : 'hover:bg-[#f4eedf] dark:hover:bg-[#2e3a8c]/30 text-[#2e3a8c] dark:text-[#4a5bb0]'
+                filterStatus === filter.key
+                  ? "bg-[#2e3a8c] hover:bg-[#1f2861] text-white"
+                  : "hover:bg-[#f4eedf] dark:hover:bg-[#2e3a8c]/30 text-[#2e3a8c] dark:text-[#4a5bb0]"
               }`}
               onClick={() => setFilterStatus(filter.key as any)}
             >
@@ -332,7 +405,8 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                   />
                   <div className="absolute top-3 left-3">
                     <Badge className={getStatusColor(property.status)}>
-                      {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
+                      {property.status.charAt(0).toUpperCase() +
+                        property.status.slice(1)}
                     </Badge>
                   </div>
                   <div className="absolute top-3 right-3 flex space-x-2">
@@ -369,7 +443,9 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                     <div>
                       <div className="flex items-center space-x-2 mb-2">
                         <TypeIcon className="w-5 h-5 text-[#ff914d]" />
-                        <h3 className="text-[#2e3a8c] dark:text-[#4a5bb0]">{property.title}</h3>
+                        <h3 className="text-[#2e3a8c] dark:text-[#4a5bb0]">
+                          {property.title}
+                        </h3>
                       </div>
                       <div className="flex items-center space-x-1 text-sm text-muted-foreground">
                         <MapPin className="w-4 h-4" />
@@ -403,12 +479,20 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                     <div className="bg-[#f4eedf] dark:bg-[#2e3a8c]/20 p-3 rounded-lg">
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="text-sm text-muted-foreground">Monthly Rent</p>
-                          <p className="text-lg text-[#2e3a8c] dark:text-[#4a5bb0]">₹{property.rent.toLocaleString()}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Monthly Rent
+                          </p>
+                          <p className="text-lg text-[#2e3a8c] dark:text-[#4a5bb0]">
+                            ₹{property.rent.toLocaleString()}
+                          </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm text-muted-foreground">Deposit</p>
-                          <p className="text-sm">₹{property.deposit.toLocaleString()}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Deposit
+                          </p>
+                          <p className="text-sm">
+                            ₹{property.deposit.toLocaleString()}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -423,7 +507,8 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                           <div className="flex-1">
                             <p className="text-sm">{property.tenant.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              Lease: {property.tenant.leaseStart} to {property.tenant.leaseEnd}
+                              Lease: {property.tenant.leaseStart} to{" "}
+                              {property.tenant.leaseEnd}
                             </p>
                           </div>
                           <div className="flex space-x-2">
@@ -431,7 +516,11 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                               variant="ghost"
                               size="sm"
                               className="text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30"
-                              onClick={() => alert(`Calling ${property.tenant?.name} (This is a demo)`)}
+                              onClick={() =>
+                                alert(
+                                  `Calling ${property.tenant?.name} (This is a demo)`
+                                )
+                              }
                             >
                               <Phone className="w-4 h-4" />
                             </Button>
@@ -439,7 +528,11 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                               variant="ghost"
                               size="sm"
                               className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                              onClick={() => alert(`Emailing ${property.tenant?.name} (This is a demo)`)}
+                              onClick={() =>
+                                alert(
+                                  `Emailing ${property.tenant?.name} (This is a demo)`
+                                )
+                              }
                             >
                               <Mail className="w-4 h-4" />
                             </Button>
@@ -451,11 +544,17 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                     {/* Amenities */}
                     <div className="border-t pt-4">
                       <div className="flex flex-wrap gap-2">
-                        {property.amenities.slice(0, 3).map((amenity, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {amenity}
-                          </Badge>
-                        ))}
+                        {property.amenities
+                          .slice(0, 3)
+                          .map((amenity, index) => (
+                            <Badge
+                              key={index}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {amenity}
+                            </Badge>
+                          ))}
                         {property.amenities.length > 3 && (
                           <Badge variant="secondary" className="text-xs">
                             +{property.amenities.length - 3} more
@@ -475,11 +574,15 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                         <Settings className="w-4 h-4 mr-2" />
                         Manage
                       </Button>
-                      {property.status === 'vacant' && (
+                      {property.status === "vacant" && (
                         <Button
                           size="sm"
                           className="flex-1 bg-[#ff914d] hover:bg-[#e57a38] text-white"
-                          onClick={() => alert(`Promoting ${property.title} (This is a demo)`)}
+                          onClick={() =>
+                            alert(
+                              `Promoting ${property.title} (This is a demo)`
+                            )
+                          }
                         >
                           <TrendingUp className="w-4 h-4 mr-2" />
                           Promote
@@ -505,12 +608,11 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
           <Building2 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-muted-foreground mb-2">No properties found</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            {filterStatus === 'all' 
+            {filterStatus === "all"
               ? "You haven't added any properties yet. Start by adding your first rental property."
-              : `No properties with status "${filterStatus}" found.`
-            }
+              : `No properties with status "${filterStatus}" found.`}
           </p>
-          {filterStatus === 'all' && (
+          {filterStatus === "all" && (
             <Button
               onClick={onNavigateToPropertyListing}
               className="bg-[#2e3a8c] hover:bg-[#1f2861] text-white"
@@ -530,18 +632,21 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
               Edit Property Details
             </DialogTitle>
             <DialogDescription>
-              Update the property information. Changes will be reflected immediately.
+              Update the property information. Changes will be reflected
+              immediately.
             </DialogDescription>
           </DialogHeader>
-          
+
           {editingProperty && (
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-title">Property Title</Label>
                 <Input
                   id="edit-title"
-                  value={editFormData.title || ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  value={editFormData.title || ""}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, title: e.target.value })
+                  }
                   placeholder="Enter property title"
                 />
               </div>
@@ -552,8 +657,13 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                   <Input
                     id="edit-rent"
                     type="number"
-                    value={editFormData.rent || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, rent: parseInt(e.target.value) })}
+                    value={editFormData.rent || ""}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        rent: parseInt(e.target.value),
+                      })
+                    }
                     placeholder="Enter rent amount"
                   />
                 </div>
@@ -563,8 +673,13 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                   <Input
                     id="edit-deposit"
                     type="number"
-                    value={editFormData.deposit || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, deposit: parseInt(e.target.value) })}
+                    value={editFormData.deposit || ""}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        deposit: parseInt(e.target.value),
+                      })
+                    }
                     placeholder="Enter deposit amount"
                   />
                 </div>
@@ -576,8 +691,13 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                   <Input
                     id="edit-bedrooms"
                     type="number"
-                    value={editFormData.bedrooms || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, bedrooms: parseInt(e.target.value) })}
+                    value={editFormData.bedrooms || ""}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        bedrooms: parseInt(e.target.value),
+                      })
+                    }
                     placeholder="Bedrooms"
                   />
                 </div>
@@ -587,8 +707,13 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                   <Input
                     id="edit-bathrooms"
                     type="number"
-                    value={editFormData.bathrooms || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, bathrooms: parseInt(e.target.value) })}
+                    value={editFormData.bathrooms || ""}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        bathrooms: parseInt(e.target.value),
+                      })
+                    }
                     placeholder="Bathrooms"
                   />
                 </div>
@@ -598,8 +723,13 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                   <Input
                     id="edit-area"
                     type="number"
-                    value={editFormData.area || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, area: parseInt(e.target.value) })}
+                    value={editFormData.area || ""}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        area: parseInt(e.target.value),
+                      })
+                    }
                     placeholder="Area"
                   />
                 </div>
@@ -608,10 +738,10 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Property Status</Label>
                 <Select
-                  value={editFormData.status || 'vacant'}
-                  onValueChange={(value: 'occupied' | 'vacant' | 'maintenance') => 
-                    setEditFormData({ ...editFormData, status: value })
-                  }
+                  value={editFormData.status || "vacant"}
+                  onValueChange={(
+                    value: "occupied" | "vacant" | "maintenance"
+                  ) => setEditFormData({ ...editFormData, status: value })}
                 >
                   <SelectTrigger id="edit-status">
                     <SelectValue placeholder="Select status" />
@@ -619,7 +749,9 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
                   <SelectContent>
                     <SelectItem value="vacant">Vacant</SelectItem>
                     <SelectItem value="occupied">Occupied</SelectItem>
-                    <SelectItem value="maintenance">Under Maintenance</SelectItem>
+                    <SelectItem value="maintenance">
+                      Under Maintenance
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -645,15 +777,19 @@ export function LandlordDashboard({ userName, userEmail, properties, onNavigateT
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-[#2e3a8c] dark:text-[#4a5bb0]">
               Delete Property
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this property? This action cannot be undone.
-              All property data, including tenant information and history, will be permanently removed.
+              Are you sure you want to delete this property? This action cannot
+              be undone. All property data, including tenant information and
+              history, will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
