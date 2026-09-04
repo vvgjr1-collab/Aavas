@@ -17,19 +17,7 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
-
-interface ServiceProvider {
-  id: string;
-  name: string;
-  category: string;
-  rating: number;
-  reviews: number;
-  price: string;
-  responseTime: string;
-  phone: string;
-  description: string;
-  services: string[];
-}
+import type { ServiceProvider } from '../types/service';
 
 interface ServiceBookingConfirmationProps {
   provider: ServiceProvider;

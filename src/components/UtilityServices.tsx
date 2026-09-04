@@ -15,24 +15,12 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import type { ServiceProvider } from '../types/service';
 
 interface UtilityServicesProps {
   userName: string;
   onBack: () => void;
   onBookService: (service: ServiceProvider) => void;
-}
-
-interface ServiceProvider {
-  id: string;
-  name: string;
-  category: string;
-  rating: number;
-  reviews: number;
-  price: string;
-  responseTime: string;
-  phone: string;
-  description: string;
-  services: string[];
 }
 
 export function UtilityServices({ userName, onBack, onBookService }: UtilityServicesProps) {

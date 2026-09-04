@@ -42,7 +42,7 @@ interface PropertyListingProps {
   onAddProperty: (propertyData: PropertyFormData) => void;
 }
 
-interface PropertyFormData {
+export interface PropertyFormData {
   title: string;
   description: string;
   type: string;
