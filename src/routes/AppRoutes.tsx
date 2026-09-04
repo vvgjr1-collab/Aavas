@@ -32,6 +32,12 @@ import { MobileTabBar, tabsForPath } from '../components/MobileTabBar';
 import { TenantSetup } from '../components/onboarding/TenantSetup';
 import { LandlordSetup } from '../components/onboarding/LandlordSetup';
 import { useTenancy } from '../context/TenancyProvider';
+import { toast } from 'sonner';
+import {
+  createProperty,
+  deleteProperty as deletePropertyRow,
+  updateProperty as updatePropertyRow,
+} from '../lib/tenancy';
 
 
 /**
@@ -396,20 +402,52 @@ function LandlordContactRoute() {
 
 function LandlordDashboardRoute() {
   const navigate = useNavigate();
-  const { properties, updateProperty, deleteProperty } = useAppState();
+  const { properties: demoProperties, updateProperty, deleteProperty, isAuthenticated } =
+    useAppState();
+  const { portfolio, pendingClaims, tenancies, refresh } = useTenancy();
   const { userName, userEmail } = useDisplayUser();
   const onBack = useBackToRoleSelection();
+
+  // Guests keep the seed portfolio; the demo has to stay readable.
+  const properties = isAuthenticated ? portfolio : demoProperties;
+
   return (
     <LandlordDashboard
       userName={userName}
       userEmail={userEmail}
       properties={properties}
+      pendingClaims={isAuthenticated ? pendingClaims : []}
+      tenancies={isAuthenticated ? tenancies : []}
+      refreshTenancy={refresh}
       onNavigateToPropertyListing={() => navigate('/landlord/properties/new')}
       onNavigateToPropertyManagement={property =>
         navigate(`/landlord/properties/${property.id}`)
       }
-      onUpdateProperty={updateProperty}
-      onDeleteProperty={deleteProperty}
+      onUpdateProperty={(id, changes) => {
+        if (!isAuthenticated) return updateProperty(id, changes);
+        updatePropertyRow(id, {
+          title: changes.title,
+          rent: changes.rent,
+          deposit: changes.deposit,
+          bedrooms: changes.bedrooms,
+          bathrooms: changes.bathrooms,
+          area_sqft: changes.area,
+          amenities: changes.amenities,
+          status: changes.status,
+        })
+          .then(refresh)
+          .catch((err: Error) =>
+            toast.error('Could not save the change', { description: err.message }),
+          );
+      }}
+      onDeleteProperty={id => {
+        if (!isAuthenticated) return deleteProperty(id);
+        deletePropertyRow(id)
+          .then(refresh)
+          .catch((err: Error) =>
+            toast.error('Could not delete the property', { description: err.message }),
+          );
+      }}
       onBack={onBack}
     />
   );
@@ -417,14 +455,36 @@ function LandlordDashboardRoute() {
 
 function PropertyListingRoute() {
   const navigate = useNavigate();
-  const { addProperty } = useAppState();
+  const { addProperty, userId, isAuthenticated } = useAppState();
+  const { refresh } = useTenancy();
   const { userName, userEmail } = useDisplayUser();
+
   return (
     <PropertyListing
       userName={userName}
       userEmail={userEmail}
       onBack={() => navigate('/landlord')}
-      onAddProperty={addProperty}
+      onAddProperty={form => {
+        if (!isAuthenticated || !userId) return addProperty(form);
+        createProperty(userId, {
+          title: form.title,
+          address_line: form.address,
+          city: form.city,
+          state: form.state,
+          pincode: form.pincode,
+          type: form.type,
+          rent: Number(form.rent) || 0,
+          deposit: Number(form.deposit) || 0,
+          bedrooms: Number(form.bedrooms) || 0,
+          bathrooms: Number(form.bathrooms) || 0,
+          area_sqft: Number(form.area) || 0,
+          amenities: form.amenities,
+        })
+          .then(refresh)
+          .catch((err: Error) =>
+            toast.error('Could not add the property', { description: err.message }),
+          );
+      }}
     />
   );
 }

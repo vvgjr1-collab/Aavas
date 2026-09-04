@@ -141,6 +141,21 @@ export async function createProperty(
   return data as DbProperty;
 }
 
+export async function updateProperty(
+  propertyId: string,
+  changes: Partial<NewPropertyInput> & { status?: string },
+): Promise<void> {
+  const client = requireSupabase();
+  const { error } = await client.from('properties').update(changes).eq('id', propertyId);
+  if (error) fail(error.message);
+}
+
+export async function deleteProperty(propertyId: string): Promise<void> {
+  const client = requireSupabase();
+  const { error } = await client.from('properties').delete().eq('id', propertyId);
+  if (error) fail(error.message);
+}
+
 export interface TenancyTerms {
   rent: number;
   deposit: number;

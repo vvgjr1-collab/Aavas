@@ -67,6 +67,9 @@ import {
   SelectValue,
 } from "./ui/select";
 import { toast } from "sonner";
+import { PendingClaims } from "./landlord/PendingClaims";
+import { ReportedPayments } from "./landlord/ReportedPayments";
+import type { DbTenancy } from "../lib/tenancy";
 import logoImage from "../assets/5552fb9550c2859aaeadad56af03cd7adcd56e69.png";
 import { toPropertyData } from "../types/property";
 import type { Property, PropertyData } from "../types/property";
@@ -75,6 +78,11 @@ interface LandlordDashboardProps {
   userName: string;
   userEmail: string;
   properties: Property[];
+  /** Tenant-declared tenancies addressed to this landlord. Empty for guests. */
+  pendingClaims?: DbTenancy[];
+  tenancies?: DbTenancy[];
+  /** Re-read after confirming a claim or a payment. */
+  refreshTenancy?: () => void;
   onNavigateToPropertyListing: () => void;
   onNavigateToPropertyManagement: (property: PropertyData) => void;
   onUpdateProperty: (
@@ -89,6 +97,9 @@ export function LandlordDashboard({
   userName,
   userEmail,
   properties,
+  pendingClaims = [],
+  tenancies = [],
+  refreshTenancy = () => {},
   onNavigateToPropertyListing,
   onNavigateToPropertyManagement,
   onUpdateProperty,
@@ -238,6 +249,18 @@ export function LandlordDashboard({
           </Button>
         </div>
       </motion.div>
+
+      {/* Things needing the landlord's attention come before the portfolio:
+          a tenant waiting to be connected, or money waiting to be acknowledged,
+          are both blocked on this person and invisible anywhere else. */}
+      {pendingClaims.length > 0 && (
+        <PendingClaims
+          claims={pendingClaims}
+          properties={properties}
+          onChanged={refreshTenancy}
+        />
+      )}
+      <ReportedPayments tenancies={tenancies} onChanged={refreshTenancy} />
 
       {/* Stats Cards */}
       <motion.div

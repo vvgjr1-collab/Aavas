@@ -19,6 +19,9 @@ import {
   type DbTenancy,
 } from '../lib/tenancy';
 import { DEMO_VIEW, fetchTenantView, type TenantPropertyView } from '../lib/tenantView';
+import { fetchPortfolio } from '../lib/landlordView';
+import { listPendingClaims } from '../lib/tenancy';
+import type { Property } from '../types/property';
 
 interface TenancyContextValue {
   /** True once a real answer exists for the current account. */
@@ -29,6 +32,10 @@ interface TenancyContextValue {
   myTenancy: DbTenancy | null;
   /** Dashboard-shaped view of myTenancy, or the demo flat for guests. */
   view: TenantPropertyView;
+  /** The landlord portfolio, composed from properties and their tenancies. */
+  portfolio: Property[];
+  /** Tenant-declared tenancies addressed to this landlord's email. */
+  pendingClaims: DbTenancy[];
   needsTenantSetup: boolean;
   needsLandlordSetup: boolean;
   error: string | null;
@@ -51,6 +58,8 @@ export function TenancyProvider({ children }: { children: ReactNode }) {
   const [properties, setProperties] = useState<DbProperty[]>([]);
   const [tenancies, setTenancies] = useState<DbTenancy[]>([]);
   const [view, setView] = useState<TenantPropertyView>(DEMO_VIEW);
+  const [portfolio, setPortfolio] = useState<Property[]>([]);
+  const [pendingClaims, setPendingClaims] = useState<DbTenancy[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [viewReady, setViewReady] = useState(false);
@@ -84,11 +93,14 @@ export function TenancyProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
 
-    Promise.all([listMyProperties(), listMyTenancies()])
-      .then(([props, tens]) => {
+    Promise.all([listMyProperties(), listMyTenancies(), listPendingClaims()])
+      .then(async ([props, tens, claims]) => {
         if (!active) return;
         setProperties(props);
         setTenancies(tens);
+        setPendingClaims(claims);
+        const composed = await fetchPortfolio(props, tens);
+        if (active) setPortfolio(composed);
       })
       .catch(err => {
         if (active) setError(err instanceof Error ? err.message : String(err));
@@ -153,12 +165,14 @@ export function TenancyProvider({ children }: { children: ReactNode }) {
       tenancies,
       myTenancy,
       view,
+      portfolio,
+      pendingClaims,
       needsTenantSetup: answerable && !myTenancy,
       needsLandlordSetup: answerable && properties.length === 0,
       error,
       refresh,
     }),
-    [demo, loaded, loading, viewReady, properties, tenancies, myTenancy, view, answerable, error, refresh],
+    [demo, loaded, loading, viewReady, properties, tenancies, myTenancy, view, portfolio, pendingClaims, answerable, error, refresh],
   );
 
   return <TenancyContext.Provider value={value}>{children}</TenancyContext.Provider>;
