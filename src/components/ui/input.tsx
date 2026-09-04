@@ -2,9 +2,14 @@ import * as React from "react";
 
 import { cn } from "./utils";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+// forwardRef matters here: react-hook-form focuses the first invalid field
+// through the ref it hands to a Controller's render prop, and Radix primitives
+// pass a ref through `asChild`. A plain function component drops it silently.
+const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
+  ({ className, type, ...props }, ref) => {
   return (
     <input
+      ref={ref}
       type={type}
       data-slot="input"
       className={cn(
@@ -16,6 +21,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
       {...props}
     />
   );
-}
+});
+Input.displayName = "Input";
 
 export { Input };

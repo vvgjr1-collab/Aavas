@@ -136,7 +136,7 @@ export function LoginForm({ onSwitchToSignup, onAuthSuccess, onBack, onGuestLogi
                       message: 'Invalid email address',
                     },
                   }}
-                  render={({ field: { ref, ...field } }) => (
+                  render={({ field }) => (
                     <Input
                       {...field}
                       id="email"
@@ -174,7 +174,7 @@ export function LoginForm({ onSwitchToSignup, onAuthSuccess, onBack, onGuestLogi
                       message: 'Password must be at least 6 characters',
                     },
                   }}
-                  render={({ field: { ref, ...field } }) => (
+                  render={({ field }) => (
                     <Input
                       {...field}
                       id="password"

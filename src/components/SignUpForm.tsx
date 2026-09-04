@@ -141,7 +141,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                       message: 'Name must be at least 2 characters',
                     },
                   }}
-                  render={({ field: { ref, ...field } }) => (
+                  render={({ field }) => (
                     <Input
                       {...field}
                       id="name"
@@ -179,7 +179,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                       message: 'Invalid email address',
                     },
                   }}
-                  render={({ field: { ref, ...field } }) => (
+                  render={({ field }) => (
                     <Input
                       {...field}
                       id="email"
@@ -221,7 +221,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                       message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
                     },
                   }}
-                  render={({ field: { ref, ...field } }) => (
+                  render={({ field }) => (
                     <Input
                       {...field}
                       id="password"
@@ -264,7 +264,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                     required: 'Please confirm your password',
                     validate: (value) => value === password || 'Passwords do not match',
                   }}
-                  render={({ field: { ref, ...field } }) => (
+                  render={({ field }) => (
                     <Input
                       {...field}
                       id="confirmPassword"
