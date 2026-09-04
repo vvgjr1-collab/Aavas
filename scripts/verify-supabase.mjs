@@ -78,7 +78,9 @@ console.log('schema:');
 
 let spec;
 try {
-  const res = await fetch(`${url}/rest/v1/`, { headers });
+  const res = await fetch(`${url}/rest/v1/`, {
+    headers: { ...headers, Accept: 'application/openapi+json' },
+  });
   spec = await res.json();
 } catch (err) {
   bad('reach the REST API', err.message);
@@ -87,13 +89,25 @@ try {
 }
 
 const exposed = new Set(Object.keys(spec?.definitions ?? spec?.components?.schemas ?? {}));
-if (exposed.size === 0) {
-  bad('read the API schema', 'no definitions returned - has db push been run?');
-} else {
-  for (const table of TABLES) {
-    if (exposed.has(table)) ok(`table ${table} exists`);
-    else bad(`table ${table} is missing`, 'migration not applied?');
-  }
+const present = TABLES.filter(t => exposed.has(t));
+
+// Nothing below can be interpreted without the tables. A missing table 404s
+// exactly like a protected one, so continuing here would print a screen of
+// reassuring passes for a database that does not exist yet.
+if (present.length === 0) {
+  console.log('  none of the expected tables exist\n');
+  console.log('The migrations have not been applied to this project.');
+  console.log('Run these in the dashboard SQL editor, in order:');
+  console.log('  1. supabase/migrations/20260904120000_schema.sql');
+  console.log('  2. supabase/migrations/20260904120100_policies.sql');
+  console.log('  3. supabase/migrations/20260904120200_storage.sql');
+  console.log('\nThen run this again.');
+  process.exit(2);
+}
+
+for (const table of TABLES) {
+  if (exposed.has(table)) ok(`table ${table} exists`);
+  else bad(`table ${table} is MISSING`, 'migrations only partly applied');
 }
 
 const rpcPaths = Object.keys(spec?.paths ?? {});
@@ -105,9 +119,16 @@ for (const fn of RPCS) {
 // --- anon is locked out ----------------------------------------------------
 console.log('\nanonymous access (every one of these must be refused):');
 
-for (const table of TABLES) {
+for (const table of present) {
   const res = await fetch(`${url}/rest/v1/${table}?select=*&limit=1`, { headers });
   const body = await res.text();
+
+  // 404 here would mean the table vanished between the two calls; it is not
+  // evidence of protection, so do not score it as such.
+  if (res.status === 404) {
+    bad(`${table} returned 404`, 'table missing - this is not proof of protection');
+    continue;
+  }
 
   if (res.status === 401 || res.status === 403) {
     ok(`${table} refuses anon`, `HTTP ${res.status}`);
@@ -182,6 +203,9 @@ if (pub.status === 400 || pub.status === 404) {
 
 console.log(`\n${passed}/${passed + failed} checks passed`);
 if (failed > 0) {
-  console.log('\nA FAIL above means data is reachable without signing in. Fix before wiring the app.');
+  console.log(
+    '\nA FAIL is either a missing object (migrations incomplete) or data reachable\n' +
+      'without signing in. Read the detail line; the second kind blocks wiring the app.',
+  );
 }
 process.exit(failed === 0 ? 0 : 1);
