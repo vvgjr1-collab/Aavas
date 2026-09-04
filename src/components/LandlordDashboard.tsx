@@ -132,17 +132,16 @@ export function LandlordDashboard({
     }
   };
 
-  const getTypeIcon = (type: string) => {
+  // Typed against Property["type"] with no default, so adding a property type
+  // without an icon here becomes a compile error rather than a silent fallback.
+  const getTypeIcon = (type: Property["type"]) => {
     switch (type) {
       case "apartment":
+      case "studio":
+      case "penthouse":
         return Building2;
       case "house":
-        return Home;
       case "villa":
-        return Home;
-      case "studio":
-        return Building2;
-      default:
         return Home;
     }
   };
