@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { motion } from 'motion/react';
-import { Eye, EyeOff, Lock, Mail, User, UserPlus, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User, UserPlus, ArrowLeft, MailCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -21,16 +21,29 @@ interface SignUpFormData {
 
 interface SignUpFormProps {
   onSwitchToLogin: () => void;
-  onAuthSuccess: (data: { name: string; email: string }) => void;
+  /**
+   * Creates the account. Resolves with signedIn=false when Supabase is waiting
+   * for the address to be confirmed, which is the normal case here; throws
+   * with a message worth showing otherwise.
+   */
+  onSubmitSignUp: (input: {
+    name: string;
+    email: string;
+    password: string;
+  }) => Promise<{ signedIn: boolean; email: string }>;
   onBack?: () => void;
   onGuestLogin?: () => void;
 }
 
-export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogin }: SignUpFormProps) {
+export function SignUpForm({ onSwitchToLogin, onSubmitSignUp, onBack, onGuestLogin }: SignUpFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [signupError, setSignupError] = useState('');
+  // Set once the account exists but the address is unconfirmed. Navigating to
+  // the dashboard here would strand the user on a signed-out screen, so the
+  // form swaps itself for an instruction instead.
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState<string | null>(null);
 
   const {
     control,
@@ -54,28 +67,74 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
   const onSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);
     setSignupError('');
-    
-    // Simulate API call
+
     try {
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          // Mock validation - reject if email already exists
-          if (data.email === 'demo@exists.com') {
-            reject(new Error('Email already exists'));
-          } else {
-            resolve(data);
-          }
-        }, 1500);
+      const result = await onSubmitSignUp({
+        name: data.name,
+        email: data.email,
+        password: data.password,
       });
-      
-      // Success - pass user data to parent
-      onAuthSuccess({ name: data.name, email: data.email });
+      // When a session comes back the caller navigates and this unmounts.
+      if (!result.signedIn) setAwaitingConfirmation(result.email);
     } catch (error) {
-      setSignupError('Email already exists. Please try a different email or sign in.');
+      setSignupError(
+        error instanceof Error
+          ? error.message
+          : 'Could not create the account. Please try again.',
+      );
     } finally {
       setIsLoading(false);
     }
   };
+
+  // The account exists but is unusable until the address is confirmed, so the
+  // only honest thing to show is what has to happen next.
+  if (awaitingConfirmation) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md mx-auto"
+      >
+        <Card className="shadow-xl border-0 bg-card/50 backdrop-blur-sm">
+          <CardHeader className="space-y-1 pb-4 text-center">
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="mx-auto mb-2 grid h-16 w-16 place-items-center rounded-2xl bg-[#2e3a8c]/10"
+            >
+              <MailCheck className="h-8 w-8 text-[#2e3a8c]" />
+            </motion.div>
+            <CardTitle className="text-2xl">Confirm your email</CardTitle>
+            <CardDescription>
+              We sent a link to <span className="font-medium">{awaitingConfirmation}</span>.
+              Open it to finish setting up your account.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              The link signs you in and brings you straight back here. If it has
+              not arrived in a minute, check your spam folder.
+            </p>
+
+            <Button variant="outline" className="w-full" onClick={onSwitchToLogin}>
+              Go to sign in
+            </Button>
+
+            <button
+              type="button"
+              onClick={() => setAwaitingConfirmation(null)}
+              className="w-full text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Use a different email address
+            </button>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

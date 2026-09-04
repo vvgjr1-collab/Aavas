@@ -26,7 +26,6 @@ import { PropertyListing } from '../components/PropertyListing';
 import { PropertyManagement } from '../components/PropertyManagement';
 
 import { useAppState, useDisplayUser } from '../context/AppState';
-import type { UserData } from '../context/AppState';
 import { TENANT_PROPERTY_ADDRESS } from '../data/properties';
 import { toPropertyData } from '../types/property';
 import { MobileTabBar, tabsForPath } from '../components/MobileTabBar';
@@ -131,29 +130,28 @@ function HomeRoute() {
   );
 }
 
-function useAuthSuccess() {
+/** Guest mode stays a local demo path; it never touches the database. */
+function useGuestLogin() {
   const navigate = useNavigate();
-  const { signIn } = useAppState();
-  return (data: UserData) => {
-    signIn(data);
+  const { signInAsGuest } = useAppState();
+  return () => {
+    signInAsGuest();
     navigate('/role');
   };
 }
 
-function useGuestLogin() {
-  const onAuthSuccess = useAuthSuccess();
-  return () => onAuthSuccess({ name: 'Guest User', email: 'guest@aavas.com' });
-}
-
 function LoginRoute() {
   const navigate = useNavigate();
-  const onAuthSuccess = useAuthSuccess();
+  const { signIn } = useAppState();
   const onGuestLogin = useGuestLogin();
   return (
     <div className="max-w-md mx-auto pt-20">
       <LoginForm
         onSwitchToSignup={() => navigate('/signup')}
-        onAuthSuccess={onAuthSuccess}
+        onSubmitCredentials={async input => {
+          await signIn(input);
+          navigate('/role');
+        }}
         onBack={() => navigate('/')}
         onGuestLogin={onGuestLogin}
       />
@@ -163,13 +161,19 @@ function LoginRoute() {
 
 function SignUpRoute() {
   const navigate = useNavigate();
-  const onAuthSuccess = useAuthSuccess();
+  const { signUp } = useAppState();
   const onGuestLogin = useGuestLogin();
   return (
     <div className="max-w-md mx-auto pt-20">
       <SignUpForm
         onSwitchToLogin={() => navigate('/login')}
-        onAuthSuccess={onAuthSuccess}
+        onSubmitSignUp={async input => {
+          const result = await signUp(input);
+          // Only navigate when a session actually came back. With email
+          // confirmation on it will not, and the form shows its own next step.
+          if (result.signedIn) navigate('/role');
+          return result;
+        }}
         onBack={() => navigate('/')}
         onGuestLogin={onGuestLogin}
       />
@@ -189,8 +193,10 @@ function RoleSelectionRoute() {
           chooseRole(role);
           navigate(role === 'tenant' ? '/tenant' : '/landlord');
         }}
-        onBack={() => {
-          signOut();
+        onBack={async () => {
+          // Sign-out is now a real call; wait for it so the login screen is
+          // never rendered with a session still in place.
+          await signOut();
           navigate('/login');
         }}
       />

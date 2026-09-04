@@ -20,12 +20,13 @@ interface LoginFormData {
 
 interface LoginFormProps {
   onSwitchToSignup: () => void;
-  onAuthSuccess: (data: { name: string; email: string }) => void;
+  /** Throws with a message worth showing when the credentials are refused. */
+  onSubmitCredentials: (input: { email: string; password: string }) => Promise<void>;
   onBack?: () => void;
   onGuestLogin?: () => void;
 }
 
-export function LoginForm({ onSwitchToSignup, onAuthSuccess, onBack, onGuestLogin }: LoginFormProps) {
+export function LoginForm({ onSwitchToSignup, onSubmitCredentials, onBack, onGuestLogin }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -49,25 +50,15 @@ export function LoginForm({ onSwitchToSignup, onAuthSuccess, onBack, onGuestLogi
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     setLoginError('');
-    
-    // Simulate API call
+
     try {
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          // Mock validation - reject if email is 'demo@error.com'
-          if (data.email === 'demo@error.com') {
-            reject(new Error('Invalid credentials'));
-          } else {
-            resolve(data);
-          }
-        }, 1500);
-      });
-      
-      // Success - extract name from email for demo purposes
-      const name = data.email.split('@')[0];
-      onAuthSuccess({ name, email: data.email });
+      await onSubmitCredentials({ email: data.email, password: data.password });
+      // Navigation is the caller's job; on success this form just unmounts.
     } catch (error) {
-      setLoginError('Invalid email or password. Please try again.');
+      // The message is already phrased for a person - see friendlyAuthError.
+      setLoginError(
+        error instanceof Error ? error.message : 'Could not sign in. Please try again.',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -293,7 +284,7 @@ export function LoginForm({ onSwitchToSignup, onAuthSuccess, onBack, onGuestLogi
 
           <div className="pt-4 text-center">
             <p className="text-xs text-muted-foreground">
-              Demo tip: Use any email except "demo@error.com" to test success flow
+              New here? Create an account, then confirm your email before signing in.
             </p>
           </div>
         </CardContent>

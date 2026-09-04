@@ -37,9 +37,16 @@ export const supabase = isSupabaseConfigured
         // this is what makes an account survive closing the app.
         persistSession: true,
         autoRefreshToken: true,
-        // The app is a HashRouter served from a static host, so tokens can
-        // arrive in the URL fragment after an email confirmation.
         detectSessionInUrl: true,
+        // PKCE, specifically because this app uses a HashRouter.
+        //
+        // The implicit flow returns tokens in the URL *fragment*
+        // (#access_token=...), which is the same place HashRouter keeps the
+        // route. The two fight: the router sees a garbage path, and whether
+        // the client parses the token before the router rewrites the hash is a
+        // race. PKCE returns ?code=... as a query parameter instead, which
+        // sits before the '#' and which HashRouter ignores entirely.
+        flowType: 'pkce',
       },
     })
   : null;
