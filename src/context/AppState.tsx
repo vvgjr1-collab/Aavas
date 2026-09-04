@@ -34,6 +34,8 @@ export type UserRole = 'tenant' | 'landlord';
 
 interface AppState {
   user: UserData | null;
+  /** The Supabase auth id, or null for guests. Rows are keyed by this. */
+  userId: string | null;
   role: UserRole | null;
   /** True until the stored session has been checked, so guards do not flash. */
   isLoadingSession: boolean;
@@ -221,6 +223,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AppState>(
     () => ({
       user,
+      userId: session?.user?.id ?? null,
       role,
       isLoadingSession,
       isGuest,

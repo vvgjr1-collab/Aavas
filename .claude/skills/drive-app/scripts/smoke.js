@@ -39,6 +39,13 @@ async function main() {
   const page = await connect();
   const { check, report } = checker();
 
+  // Start signed out. Since accounts became real, a session left in the
+  // browser profile by an earlier run changes what these routes render - a
+  // signed-in account with no property is sent to onboarding, not to the
+  // dashboard - and the failures look like regressions that are not.
+  await page.load(`${BASE}/#/`, 1500);
+  await page.evaluate('localStorage.clear(); sessionStorage.clear();');
+
   console.log('routes render:');
   for (const [route, marker] of ROUTES) {
     await page.load(`${BASE}/${route}`, SETTLE);

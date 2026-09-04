@@ -29,6 +29,10 @@ import { useAppState, useDisplayUser } from '../context/AppState';
 import { TENANT_PROPERTY_ADDRESS } from '../data/properties';
 import { toPropertyData } from '../types/property';
 import { MobileTabBar, tabsForPath } from '../components/MobileTabBar';
+import { TenantSetup } from '../components/onboarding/TenantSetup';
+import { LandlordSetup } from '../components/onboarding/LandlordSetup';
+import { useOnboarding } from '../hooks/useOnboarding';
+
 
 /**
  * Route wrappers. Each one adapts the router to a feature component's existing
@@ -214,6 +218,72 @@ function useBackToRoleSelection() {
   };
 }
 
+/**
+ * Sends a signed-in account that has nothing set up to its setup screen.
+ *
+ * Guests and unconfigured builds fall straight through: guest mode is a local
+ * demo over the seed data, and pushing a demo user into a form that cannot
+ * save would be worse than the fake dashboard.
+ *
+ * Nothing renders until the check has run, so a returning user never sees a
+ * flash of setup on their way to a dashboard they already own.
+ */
+function RequireSetup({
+  need,
+  to,
+  children,
+}: {
+  need: 'tenant' | 'landlord';
+  to: string;
+  children: ReactNode;
+}) {
+  const { ready, needsTenantSetup, needsLandlordSetup } = useOnboarding();
+  const { isLoadingSession } = useAppState();
+
+  // Wait for a real answer. Rendering the dashboard early would flash the wrong
+  // screen; redirecting early sends a set-up account back into onboarding.
+  if (isLoadingSession || !ready) return null;
+  const needsSetup = need === 'tenant' ? needsTenantSetup : needsLandlordSetup;
+  if (needsSetup) return <Navigate to={to} replace />;
+  return <>{children}</>;
+}
+
+function TenantSetupRoute() {
+  const navigate = useNavigate();
+  const { userId } = useAppState();
+  const { userName } = useDisplayUser();
+
+  // Reached without an account - a guest, say. There is nothing to attach a
+  // tenancy to, so send them to the demo dashboard they came for.
+  if (!userId) return <Navigate to="/tenant" replace />;
+
+  return (
+    <TenantSetup
+      userId={userId}
+      userName={userName}
+      onDone={() => navigate('/tenant', { replace: true })}
+      onBack={() => navigate('/role')}
+    />
+  );
+}
+
+function LandlordSetupRoute() {
+  const navigate = useNavigate();
+  const { userId } = useAppState();
+  const { userName } = useDisplayUser();
+
+  if (!userId) return <Navigate to="/landlord" replace />;
+
+  return (
+    <LandlordSetup
+      userId={userId}
+      userName={userName}
+      onDone={() => navigate('/landlord', { replace: true })}
+      onBack={() => navigate('/role')}
+    />
+  );
+}
+
 function TenantDashboardRoute() {
   const navigate = useNavigate();
   const { userName, userEmail } = useDisplayUser();
@@ -380,14 +450,30 @@ export function AppRoutes() {
         <Route path="/signup" element={<SignUpRoute />} />
         <Route path="/role" element={<RoleSelectionRoute />} />
 
-        <Route path="/tenant" element={<TenantDashboardRoute />} />
+        <Route path="/tenant/setup" element={<TenantSetupRoute />} />
+        <Route
+          path="/tenant"
+          element={
+            <RequireSetup need="tenant" to="/tenant/setup">
+              <TenantDashboardRoute />
+            </RequireSetup>
+          }
+        />
         <Route path="/tenant/rent" element={<RentDetailsRoute />} />
         <Route path="/tenant/utilities" element={<UtilityServicesRoute />} />
         <Route path="/tenant/utilities/book" element={<ServiceBookingRoute />} />
         <Route path="/tenant/complaint" element={<ComplaintRoute />} />
         <Route path="/tenant/landlord-contact" element={<LandlordContactRoute />} />
 
-        <Route path="/landlord" element={<LandlordDashboardRoute />} />
+        <Route path="/landlord/setup" element={<LandlordSetupRoute />} />
+        <Route
+          path="/landlord"
+          element={
+            <RequireSetup need="landlord" to="/landlord/setup">
+              <LandlordDashboardRoute />
+            </RequireSetup>
+          }
+        />
         <Route path="/landlord/properties/new" element={<PropertyListingRoute />} />
         <Route path="/landlord/properties/:id" element={<PropertyManagementRoute />} />
       </Route>
