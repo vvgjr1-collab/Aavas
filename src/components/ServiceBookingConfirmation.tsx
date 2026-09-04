@@ -18,6 +18,10 @@ import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import type { ServiceProvider } from '../types/service';
+import { toast } from 'sonner';
+import { useTenancy } from '../context/TenancyProvider';
+import { useAppState } from '../context/AppState';
+import { createBooking } from '../lib/records';
 
 interface ServiceBookingConfirmationProps {
   provider: ServiceProvider;
@@ -37,6 +41,8 @@ export function ServiceBookingConfirmation({
   onConfirmBooking 
 }: ServiceBookingConfirmationProps) {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
+  const { myTenancy, refresh } = useTenancy();
+  const { userId } = useAppState();
   const [selectedService, setSelectedService] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [isBookingConfirmed, setIsBookingConfirmed] = useState<boolean>(false);
@@ -52,13 +58,35 @@ export function ServiceBookingConfirmation({
   ];
 
   const handleConfirmBooking = () => {
-    if (selectedTimeSlot && selectedService) {
+    if (!selectedTimeSlot || !selectedService) return;
+
+    // Guest mode has no tenancy to book against.
+    if (!myTenancy || !userId) {
       setIsBookingConfirmed(true);
-      // Simulate a delay for booking processing
-      setTimeout(() => {
-        onConfirmBooking();
-      }, 2000);
+      setTimeout(onConfirmBooking, 2000);
+      return;
     }
+
+    const slot = timeSlots.find(s => s.id === selectedTimeSlot);
+    createBooking({
+      tenancyId: myTenancy.id,
+      userId,
+      providerName: provider.name,
+      category: provider.category ?? '',
+      notes: [slot ? `${slot.date} ${slot.time}` : '', selectedService]
+        .filter(Boolean)
+        .join(' - '),
+    })
+      .then(() => {
+        setIsBookingConfirmed(true);
+        refresh();
+        setTimeout(onConfirmBooking, 2000);
+      })
+      .catch(err => {
+        toast.error('Could not book that service', {
+          description: err instanceof Error ? err.message : 'Please try again.',
+        });
+      });
   };
 
   if (isBookingConfirmed) {

@@ -15,6 +15,10 @@ import { RentDetails } from './RentDetails';
 import logoImage from '../assets/f9db841723abccd8e77067ba08099110a512d8fa.png';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import type { TenantPropertyView } from '../lib/tenantView';
+import { useTenancy } from '../context/TenancyProvider';
+import { useAppState } from '../context/AppState';
+import { reportPayment } from '../lib/records';
+import { withdrawTenancy } from '../lib/tenancy';
 
 interface TenantDashboardProps {
   userName: string;
@@ -43,6 +47,27 @@ export function TenantDashboard({ userName, userEmail, property, onNavigateToRen
   const [bankName, setBankName] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isRentPaid, setIsRentPaid] = useState(false);
+  const { myTenancy, refresh } = useTenancy();
+  const { userId } = useAppState();
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  const handleWithdraw = () => {
+    if (!myTenancy) return;
+    setIsWithdrawing(true);
+    withdrawTenancy(myTenancy.id)
+      .then(() => {
+        refresh();
+        toast.success('Claim withdrawn', {
+          description: 'You can set your tenancy up again from scratch.',
+        });
+      })
+      .catch(err =>
+        toast.error('Could not withdraw the claim', {
+          description: err instanceof Error ? err.message : 'Please try again.',
+        }),
+      )
+      .finally(() => setIsWithdrawing(false));
+  };
 
   const propertyData = property;
 
@@ -109,23 +134,74 @@ export function TenantDashboard({ userName, userEmail, property, onNavigateToRen
       return;
     }
 
-    setIsProcessingPayment(true);
-    // Simulate payment processing
-    setTimeout(() => {
-      setIsProcessingPayment(false);
-      setShowPaymentDialog(false);
-      // Reset form
+    const clearForm = () => {
       setUpiId('');
       setCardNumber('');
       setCardExpiry('');
       setCardCvv('');
       setBankName('');
-      toast.success('Payment of ₹45,000 successful! Transaction ID: TXN' + Math.random().toString(36).substr(2, 9).toUpperCase(), {
-        description: 'Your rent payment has been processed successfully.',
-        duration: 5000,
-      });
-      setIsRentPaid(true);
-    }, 2000);
+    };
+
+    const METHOD_LABEL = {
+      upi: 'UPI Transfer',
+      netbanking: 'Net Banking',
+      card: 'Card',
+    } as const;
+
+    setIsProcessingPayment(true);
+
+    // Guest mode has no tenancy to record against, so it keeps the simulated
+    // flow rather than failing - the demo has to stay usable.
+    if (!myTenancy || !userId) {
+      setTimeout(() => {
+        setIsProcessingPayment(false);
+        setShowPaymentDialog(false);
+        clearForm();
+        toast.success('Payment recorded (demo)', {
+          description: 'Sign in with an account to record real payments.',
+          duration: 5000,
+        });
+        setIsRentPaid(true);
+      }, 1200);
+      return;
+    }
+
+    // Recorded as 'reported', not 'paid'. The tenant is saying they have paid;
+    // confirming receipt is the landlord's to do, and the insert policy would
+    // refuse anything else.
+    reportPayment({
+      tenancyId: myTenancy.id,
+      userId,
+      // A pending tenant-declared tenancy has rent = 0 by policy; the figure
+      // the tenant is actually paying against is their proposal, which is what
+      // the screen shows them. Recording 0 would be a false record of a real
+      // payment.
+      amount: Number(myTenancy.rent) || Number(myTenancy.proposed_rent) || 0,
+      method: METHOD_LABEL[paymentMethod],
+      reference:
+        paymentMethod === 'upi'
+          ? upiId
+          : paymentMethod === 'netbanking'
+            ? bankName
+            : cardNumber.slice(-4).padStart(4, '*'),
+      dueDate: null,
+    })
+      .then(() => {
+        setShowPaymentDialog(false);
+        clearForm();
+        setIsRentPaid(true);
+        refresh();
+        toast.success('Payment recorded', {
+          description: 'Your landlord will see it and confirm receipt.',
+          duration: 5000,
+        });
+      })
+      .catch(err => {
+        toast.error('Could not record the payment', {
+          description: err instanceof Error ? err.message : 'Please try again.',
+        });
+      })
+      .finally(() => setIsProcessingPayment(false));
   };
 
   return (
@@ -205,12 +281,25 @@ export function TenantDashboard({ userName, userEmail, property, onNavigateToRen
                       {propertyData.propertyType}
                     </Badge>
                     {propertyData.isUnconfirmed && (
-                      <Badge
-                        variant="secondary"
-                        style={{ backgroundColor: 'rgba(255, 165, 0, 0.18)', color: '#b45309' }}
-                      >
-                        Awaiting landlord confirmation
-                      </Badge>
+                      <>
+                        <Badge
+                          variant="secondary"
+                          style={{ backgroundColor: 'rgba(255, 165, 0, 0.18)', color: '#b45309' }}
+                        >
+                          Awaiting landlord confirmation
+                        </Badge>
+                        {/* Without this a mistyped address is permanent. */}
+                        {myTenancy && (
+                          <button
+                            type="button"
+                            onClick={handleWithdraw}
+                            disabled={isWithdrawing}
+                            className="rounded-lg px-1 text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-destructive hover:underline disabled:opacity-50"
+                          >
+                            {isWithdrawing ? 'Withdrawing…' : 'Withdraw'}
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -700,7 +789,7 @@ export function TenantDashboard({ userName, userEmail, property, onNavigateToRen
                   Processing...
                 </div>
               ) : (
-                <>Pay ₹45,000</>
+                <>Pay {propertyData.lease.monthlyRent}</>
               )}
             </Button>
           </DialogFooter>

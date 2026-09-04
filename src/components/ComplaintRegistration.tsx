@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { useTenancy } from '../context/TenancyProvider';
+import { useAppState } from '../context/AppState';
+import { createComplaint } from '../lib/records';
 import { motion } from 'motion/react';
 import { 
   ArrowLeft,
@@ -47,6 +50,9 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
   const [description, setDescription] = useState<string>('');
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const { myTenancy, refresh } = useTenancy();
+  const { userId } = useAppState();
 
   const complaintCategories: ComplaintCategory[] = [
     {
@@ -121,13 +127,37 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
   };
 
   const handleSubmitComplaint = () => {
-    if (selectedCategory && priority && description.trim()) {
+    if (!selectedCategory || !priority || !description.trim()) return;
+
+    // Guest mode has no tenancy to file against; it keeps the simulated
+    // confirmation so the demo still reads.
+    if (!myTenancy || !userId) {
       setIsSubmitted(true);
-      // Simulate form processing
-      window.setTimeout(() => {
-        onBack();
-      }, 3000);
+      window.setTimeout(onBack, 3000);
+      return;
     }
+
+    setIsSaving(true);
+    createComplaint({
+      tenancyId: myTenancy.id,
+      userId,
+      category: selectedCategory,
+      // The category doubles as the title until the form asks for one.
+      title: selectedCategory,
+      description: description.trim(),
+      priority,
+    })
+      .then(() => {
+        setIsSubmitted(true);
+        refresh();
+        window.setTimeout(onBack, 3000);
+      })
+      .catch(err => {
+        toast.error('Could not file the complaint', {
+          description: err instanceof Error ? err.message : 'Please try again.',
+        });
+      })
+      .finally(() => setIsSaving(false));
   };
 
   const removeFile = (fileToRemove: string) => {

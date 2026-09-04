@@ -252,6 +252,49 @@ const main = async () => {
     ),
   );
 
+  // --- withdrawing a claim -------------------------------------------------
+  console.log('\nwithdrawing a pending tenancy:');
+
+  const throwaway = await asUser(db, tenantB, async () => {
+    const r = await db.query(
+      `insert into public.tenancies
+         (tenant_id, source, status, claimed_address, created_by)
+       values ($1, 'tenant', 'pending', 'Typo Street', $1) returning id`,
+      [tenantB],
+    );
+    return r.rows[0].id;
+  });
+
+  checkDenied(
+    'someone else cannot delete your pending claim',
+    await expectDenied(db, stranger, async () => {
+      const r = await db.query('delete from public.tenancies where id = $1 returning id', [
+        throwaway,
+      ]);
+      if (r.rows.length === 0) throw new Error('no rows deleted (RLS filtered them)');
+      return r;
+    }),
+  );
+
+  const withdrawn = await asUser(db, tenantB, async () => {
+    const r = await db.query('delete from public.tenancies where id = $1 returning id', [
+      throwaway,
+    ]);
+    return r.rows.length;
+  });
+  check('a tenant can withdraw their own pending claim', withdrawn, 1);
+
+  checkDenied(
+    'an active tenancy cannot be deleted, only ended',
+    await expectDenied(db, landlordA, async () => {
+      const r = await db.query('delete from public.tenancies where id = $1 returning id', [
+        tenancyA,
+      ]);
+      if (r.rows.length === 0) throw new Error('no rows deleted (RLS filtered them)');
+      return r;
+    }),
+  );
+
   // --- isolation between tenancies -----------------------------------------
   console.log('\nisolation between unrelated users:');
 

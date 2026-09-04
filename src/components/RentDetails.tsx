@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   ArrowLeft,
@@ -17,6 +17,18 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { useTenancy } from '../context/TenancyProvider';
+import { useAppState } from '../context/AppState';
+import { listPayments, type DbPayment } from '../lib/records';
+
+/** Shown to guests, who have no tenancy to read payments from. */
+const DEMO_PAYMENT_HISTORY = [
+  { id: 'PAY-001', date: 'Nov 1, 2024', amount: '₹45,000', type: 'Monthly Rent', status: 'Paid', method: 'UPI Transfer', dueDate: 'Nov 1, 2024' },
+  { id: 'PAY-002', date: 'Oct 1, 2024', amount: '₹45,000', type: 'Monthly Rent', status: 'Paid', method: 'UPI Transfer', dueDate: 'Oct 1, 2024' },
+  { id: 'PAY-003', date: 'Sep 1, 2024', amount: '₹45,000', type: 'Monthly Rent', status: 'Paid', method: 'UPI Transfer', dueDate: 'Sep 1, 2024' },
+  { id: 'PAY-004', date: 'Aug 1, 2024', amount: '₹45,000', type: 'Monthly Rent', status: 'Paid', method: 'UPI Transfer', dueDate: 'Aug 1, 2024' },
+  { id: 'PAY-005', date: 'Jan 15, 2024', amount: '₹1,35,000', type: 'First Month + Security Deposit', status: 'Paid', method: 'Bank Transfer', dueDate: 'Jan 15, 2024' },
+];
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 interface RentDetailsProps {
@@ -28,67 +40,85 @@ interface RentDetailsProps {
 export function RentDetails({ userName, initialTab = 'agreement', onBack }: RentDetailsProps) {
   const [activeTab, setActiveTab] = useState<'agreement' | 'history'>(initialTab);
 
-  // Mock rent data
+  // Everything on this screen comes from the tenancy. Guests get the demo
+  // figures, which is what DEMO_VIEW carries.
+  const { myTenancy, view, ready } = useTenancy();
+  const { userId } = useAppState();
+  const [payments, setPayments] = useState<DbPayment[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+
   const rentData = {
-    propertyAddress: "123 Sunset Boulevard, Apt 4B, Mumbai, MH 400001",
-    rentStart: "January 15, 2024",
-    rentEnd: "January 14, 2025",
-    monthlyRent: "₹45,000",
-    securityDeposit: "₹90,000",
-    rentType: "Fixed-term Residential Rent",
-    landlord: "Sarah Johnson",
+    propertyAddress: [view.address, view.city].filter(Boolean).join(', '),
+    rentStart: view.lease.startDate,
+    rentEnd: view.lease.endDate,
+    monthlyRent: view.lease.monthlyRent,
+    securityDeposit: view.lease.deposit,
+    rentType: 'Fixed-term Residential Rent',
+    landlord: view.owner.name,
     tenant: userName,
-    documentId: "RENT-2024-001234"
+    // Short, stable and derived from the tenancy rather than invented.
+    documentId: myTenancy ? `AAVAS-${myTenancy.id.slice(0, 8).toUpperCase()}` : 'AAVAS-DEMO',
   };
 
-  // Mock payment history
-  const paymentHistory = [
-    {
-      id: "PAY-001",
-      date: "Nov 1, 2024",
-      amount: "₹45,000",
-      type: "Monthly Rent",
-      status: "Paid",
-      method: "UPI Transfer",
-      dueDate: "Nov 1, 2024"
-    },
-    {
-      id: "PAY-002",
-      date: "Oct 1, 2024",
-      amount: "₹45,000",
-      type: "Monthly Rent",
-      status: "Paid",
-      method: "UPI Transfer",
-      dueDate: "Oct 1, 2024"
-    },
-    {
-      id: "PAY-003",
-      date: "Sep 1, 2024",
-      amount: "₹45,000",
-      type: "Monthly Rent",
-      status: "Paid",
-      method: "UPI Transfer",
-      dueDate: "Sep 1, 2024"
-    },
-    {
-      id: "PAY-004",
-      date: "Aug 1, 2024",
-      amount: "₹45,000",
-      type: "Monthly Rent",
-      status: "Paid",
-      method: "UPI Transfer",
-      dueDate: "Aug 1, 2024"
-    },
-    {
-      id: "PAY-005",
-      date: "Jan 15, 2024",
-      amount: "₹1,35,000",
-      type: "First Month + Security Deposit",
-      status: "Paid",
-      method: "Bank Transfer",
-      dueDate: "Jan 15, 2024"
+  useEffect(() => {
+    if (!myTenancy) {
+      setPayments([]);
+      return;
     }
-  ];
+    let active = true;
+    setLoadingPayments(true);
+    listPayments(myTenancy.id)
+      .then(rows => {
+        if (active) setPayments(rows);
+      })
+      .catch(() => {
+        if (active) setPayments([]);
+      })
+      .finally(() => {
+        if (active) setLoadingPayments(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [myTenancy?.id, ready]);
+
+  const money = (n: number) => `₹${Number(n).toLocaleString('en-IN')}`;
+  const day = (iso: string | null) =>
+    iso
+      ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : '--';
+
+  const STATUS_LABEL: Record<string, string> = {
+    due: 'Due',
+    reported: 'Reported',
+    paid: 'Paid',
+  };
+
+  // A guest has no tenancy, so the demo rows stand in; a real tenant sees
+  // their own payments, including none at all.
+  const paymentHistory = myTenancy
+    ? payments.map(p => ({
+        id: p.id,
+        date: day(p.paid_at ?? p.created_at),
+        amount: money(p.amount),
+        type: 'Monthly Rent',
+        status: STATUS_LABEL[p.status] ?? p.status,
+        method: p.method || '--',
+        dueDate: day(p.due_date),
+      }))
+    : DEMO_PAYMENT_HISTORY;
+
+  // Only confirmed receipts count towards the total; a payment the tenant has
+  // reported is not money the landlord has acknowledged.
+  const summary = myTenancy
+    ? {
+        totalPaid: money(
+          payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + Number(p.amount), 0),
+        ),
+        count: payments.length,
+      }
+    : { totalPaid: '₹2,70,000', count: 5 };
+
 
   const handleViewPDF = async () => {
     const { jsPDF } = await import('jspdf');
@@ -728,7 +758,7 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
                       <CheckCircle className="w-5 h-5" style={{ color: 'var(--tenant-success-dark)' }} />
                       <div>
                         <p className="text-sm text-muted-foreground">Total Paid</p>
-                        <p style={{ color: 'var(--tenant-success-dark)' }}>₹2,70,000</p>
+                        <p style={{ color: 'var(--tenant-success-dark)' }}>{summary.totalPaid}</p>
                       </div>
                     </div>
                   </div>
@@ -737,7 +767,7 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
                       <Calendar className="w-5 h-5" style={{ color: 'var(--tenant-primary)' }} />
                       <div>
                         <p className="text-sm text-muted-foreground">Payments Made</p>
-                        <p style={{ color: 'var(--tenant-primary)' }}>5</p>
+                        <p style={{ color: 'var(--tenant-primary)' }}>{summary.count}</p>
                       </div>
                     </div>
                   </div>
@@ -746,13 +776,31 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
                       <IndianRupee className="w-5 h-5" style={{ color: 'var(--tenant-primary)' }} />
                       <div>
                         <p className="text-sm text-muted-foreground">Next Payment</p>
-                        <p style={{ color: 'var(--tenant-primary)' }}>Dec 1, 2024</p>
+                        <p style={{ color: 'var(--tenant-primary)' }}>{view.nextRentDue}</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <Separator className="mb-6" style={{ backgroundColor: 'var(--tenant-primary)', opacity: 0.3 }} />
+
+                {/* A real tenancy with no payments yet is the normal state for
+                    a new tenant, and an empty table with headers reads as
+                    something having gone wrong. */}
+                {paymentHistory.length === 0 && (
+                  <div className="rounded-2xl border border-dashed p-8 text-center"
+                       style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 25%, transparent)' }}>
+                    <IndianRupee className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+                    <p className="font-medium" style={{ color: 'var(--tenant-primary)' }}>
+                      {loadingPayments ? 'Loading your payments…' : 'No payments recorded yet'}
+                    </p>
+                    {!loadingPayments && (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Your first payment will appear here once you pay rent from your dashboard.
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Payment history. A six-column table is 656px wide - it only
                     ever scrolled sideways inside its own container on a phone,

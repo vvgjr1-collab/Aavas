@@ -1,6 +1,7 @@
 import { HashRouter } from 'react-router-dom';
 import { MotionConfig } from 'motion/react';
 import { AppStateProvider } from './context/AppState';
+import { TenancyProvider } from './context/TenancyProvider';
 import { AppRoutes } from './routes/AppRoutes';
 import { Toaster } from './components/ui/sonner';
 import { NativeShell } from './native/NativeShell';
@@ -23,11 +24,13 @@ export default function App() {
     >
       <HashRouter>
         <AppStateProvider>
+          <TenancyProvider>
           {/* Android hardware back button and status-bar tinting. Inert on the
               web, where the same bundle is served by GitHub Pages. */}
           <NativeShell />
           <AppRoutes />
-          <Toaster position="top-center" expand richColors />
+            <Toaster position="top-center" expand richColors />
+          </TenancyProvider>
         </AppStateProvider>
       </HashRouter>
     </MotionConfig>

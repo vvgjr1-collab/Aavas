@@ -31,8 +31,7 @@ import { toPropertyData } from '../types/property';
 import { MobileTabBar, tabsForPath } from '../components/MobileTabBar';
 import { TenantSetup } from '../components/onboarding/TenantSetup';
 import { LandlordSetup } from '../components/onboarding/LandlordSetup';
-import { useOnboarding } from '../hooks/useOnboarding';
-import { useTenantView } from '../hooks/useTenantView';
+import { useTenancy } from '../context/TenancyProvider';
 
 
 /**
@@ -238,7 +237,7 @@ function RequireSetup({
   to: string;
   children: ReactNode;
 }) {
-  const { ready, needsTenantSetup, needsLandlordSetup } = useOnboarding();
+  const { ready, needsTenantSetup, needsLandlordSetup } = useTenancy();
   const { isLoadingSession } = useAppState();
 
   // Wait for a real answer. Rendering the dashboard early would flash the wrong
@@ -251,11 +250,16 @@ function RequireSetup({
 
 function TenantSetupRoute() {
   const navigate = useNavigate();
-  const { userId } = useAppState();
+  const { userId, isLoadingSession } = useAppState();
   const { userName } = useDisplayUser();
 
-  // Reached without an account - a guest, say. There is nothing to attach a
-  // tenancy to, so send them to the demo dashboard they came for.
+  // On a direct visit or a reload the session is still being read back, and
+  // userId is briefly null for an account that has one. Deciding here would
+  // bounce a signed-in user straight back out of their own setup screen.
+  if (isLoadingSession) return null;
+
+  // Genuinely no account - a guest, say. There is nothing to attach a tenancy
+  // to, so send them to the demo dashboard they came for.
   if (!userId) return <Navigate to="/tenant" replace />;
 
   return (
@@ -270,9 +274,10 @@ function TenantSetupRoute() {
 
 function LandlordSetupRoute() {
   const navigate = useNavigate();
-  const { userId } = useAppState();
+  const { userId, isLoadingSession } = useAppState();
   const { userName } = useDisplayUser();
 
+  if (isLoadingSession) return null;
   if (!userId) return <Navigate to="/landlord" replace />;
 
   return (
@@ -289,7 +294,7 @@ function TenantDashboardRoute() {
   const navigate = useNavigate();
   const { userName, userEmail } = useDisplayUser();
   const onBack = useBackToRoleSelection();
-  const { view, ready } = useTenantView();
+  const { view, ready } = useTenancy();
 
   // Hold rather than paint the demo flat and swap it a moment later.
   if (!ready) return null;

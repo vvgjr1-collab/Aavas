@@ -291,6 +291,18 @@ export async function confirmTenancy(input: {
   return (Array.isArray(data) ? data[0] : data) as DbTenancy;
 }
 
+/**
+ * Withdraw a pending claim you opened - a mistyped address, say.
+ *
+ * Only pending rows are deletable (see the policy); an active tenancy is a
+ * record of an agreement between two people and is ended, not erased.
+ */
+export async function withdrawTenancy(tenancyId: string): Promise<void> {
+  const client = requireSupabase();
+  const { error } = await client.from('tenancies').delete().eq('id', tenancyId);
+  if (error) fail(error.message);
+}
+
 export async function rejectTenancyClaim(tenancyId: string): Promise<void> {
   const client = requireSupabase();
   const { error } = await client.rpc('reject_tenancy_claim', { p_tenancy_id: tenancyId });
