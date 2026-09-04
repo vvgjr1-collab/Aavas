@@ -381,7 +381,9 @@ export function LandlordDashboard({
                       variant="ghost"
                       size="sm"
                       className="bg-white/90 hover:bg-white text-[#2e3a8c]"
-                      onClick={() => handleEditClick(property)}
+                      onClick={() =>
+                        onNavigateToPropertyManagement(toPropertyData(property))
+                      }
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
