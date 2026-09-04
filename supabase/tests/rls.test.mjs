@@ -300,12 +300,20 @@ const main = async () => {
     invites: 0,
   });
 
-  const anonSees = await expectDenied(db, null, async () => {
+  // Assert the strong form. "Zero rows" would also pass a weaker check, but it
+  // means the only thing standing between anon and the data is a policy - and
+  // one mistaken `using (true)` would be enough. After the hardening migration
+  // anon holds no SELECT privilege at all, so the request is refused outright.
+  const anonAttempt = await expectDenied(db, null, async () => {
     const r = await db.query('select count(*)::int as n from public.tenancies');
-    if (r.rows[0].n > 0) throw new Error(`anon saw ${r.rows[0].n} rows`);
-    throw new Error('no rows, but the table was still readable');
+    throw new Error(`readable: the query ran and returned ${r.rows[0].n} rows`);
   });
-  checkDenied('a signed-out caller reads nothing', anonSees);
+  check(
+    'a signed-out caller is refused outright, not merely filtered',
+    /permission denied/.test(anonAttempt || ''),
+    true,
+  );
+  if (anonAttempt) console.log(`        ${anonAttempt.split('\n')[0].slice(0, 92)}`);
 
   // --- profile visibility ---------------------------------------------------
   console.log('\nprofile visibility:');

@@ -4,14 +4,21 @@
  *   node scripts/verify-supabase.mjs                 # reads .env
  *   node scripts/verify-supabase.mjs <url> <anonKey>
  *
- * Uses the anon key only - the same public credential the browser gets. That is
- * the point: this checks what an anonymous stranger on the internet can reach.
- * Every table must refuse them, so a PASS here means "correctly denied".
+ * Uses the publishable (anon) key only - the same public credential the browser
+ * gets. That is the point: this measures what an anonymous stranger on the
+ * internet can reach. Every table must refuse them, so a PASS here usually
+ * reads as "correctly denied".
  *
- * The RLS logic itself is proven in supabase/tests (real Postgres, every
- * signed-in case). This checks the things only a live project can answer: that
- * the migrations actually applied, that RLS is switched on, that no grant leaked
- * to anon, and that the documents bucket is private.
+ * Existence is probed table by table rather than through the OpenAPI document,
+ * because Supabase now serves that only to secret keys ("Only secret API keys
+ * can be used for this endpoint"). Probing is better anyway: 404 means the
+ * table is not there, and any other status means it is - and the same response
+ * answers whether anon got anything out of it.
+ *
+ * The RLS logic itself is proven in supabase/tests against real Postgres. This
+ * covers what only a live project can answer: that the migrations applied, that
+ * RLS is switched on, that no grant leaked to anon, that the documents bucket
+ * is private, and that email confirmation is required.
  */
 import { readFile } from 'node:fs/promises';
 
@@ -35,16 +42,20 @@ const RPCS = [
 
 let passed = 0;
 let failed = 0;
+const leaks = [];
+// Tables anon can still *run* a query against, where only RLS stops the rows.
+// Safe, but one mistaken policy away from not being safe.
+const rlsOnly = [];
 
-function ok(label, detail = '') {
+const ok = (label, detail = '') => {
   passed++;
   console.log(`  PASS  ${label}${detail ? `\n        ${detail}` : ''}`);
-}
+};
 
-function bad(label, detail = '') {
+const bad = (label, detail = '') => {
   failed++;
   console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ''}`);
-}
+};
 
 async function loadEnv() {
   const [, , argUrl, argKey] = process.argv;
@@ -73,102 +84,83 @@ const headers = { apikey: key, Authorization: `Bearer ${key}` };
 
 console.log(`project: ${url}\n`);
 
-// --- the migrations applied ------------------------------------------------
-console.log('schema:');
+// --- tables ----------------------------------------------------------------
+// One request per table answers both questions: does it exist, and did an
+// anonymous caller get anything out of it.
+console.log('tables (must exist, and must give an anonymous caller nothing):');
 
-let spec;
-try {
-  const res = await fetch(`${url}/rest/v1/`, {
-    headers: { ...headers, Accept: 'application/openapi+json' },
-  });
-  spec = await res.json();
-} catch (err) {
-  bad('reach the REST API', err.message);
-  console.log('\nCannot continue without the API. Check the URL and key.');
-  process.exit(1);
-}
-
-const exposed = new Set(Object.keys(spec?.definitions ?? spec?.components?.schemas ?? {}));
-const present = TABLES.filter(t => exposed.has(t));
-
-// Nothing below can be interpreted without the tables. A missing table 404s
-// exactly like a protected one, so continuing here would print a screen of
-// reassuring passes for a database that does not exist yet.
-if (present.length === 0) {
-  console.log('  none of the expected tables exist\n');
-  console.log('The migrations have not been applied to this project.');
-  console.log('Run these in the dashboard SQL editor, in order:');
-  console.log('  1. supabase/migrations/20260904120000_schema.sql');
-  console.log('  2. supabase/migrations/20260904120100_policies.sql');
-  console.log('  3. supabase/migrations/20260904120200_storage.sql');
-  console.log('\nThen run this again.');
-  process.exit(2);
-}
+const missing = [];
 
 for (const table of TABLES) {
-  if (exposed.has(table)) ok(`table ${table} exists`);
-  else bad(`table ${table} is MISSING`, 'migrations only partly applied');
-}
+  let res;
+  let body;
+  try {
+    res = await fetch(`${url}/rest/v1/${table}?select=*&limit=1`, { headers });
+    body = await res.text();
+  } catch (err) {
+    bad(`${table}: request failed`, err.message);
+    continue;
+  }
 
-const rpcPaths = Object.keys(spec?.paths ?? {});
-for (const fn of RPCS) {
-  if (rpcPaths.includes(`/rpc/${fn}`)) ok(`function ${fn}() is exposed`);
-  else bad(`function ${fn}() is missing`);
-}
-
-// --- anon is locked out ----------------------------------------------------
-console.log('\nanonymous access (every one of these must be refused):');
-
-for (const table of present) {
-  const res = await fetch(`${url}/rest/v1/${table}?select=*&limit=1`, { headers });
-  const body = await res.text();
-
-  // 404 here would mean the table vanished between the two calls; it is not
-  // evidence of protection, so do not score it as such.
   if (res.status === 404) {
-    bad(`${table} returned 404`, 'table missing - this is not proof of protection');
+    missing.push(table);
+    bad(`${table} does not exist`, 'migration not applied');
     continue;
   }
 
   if (res.status === 401 || res.status === 403) {
-    ok(`${table} refuses anon`, `HTTP ${res.status}`);
+    ok(`${table} exists and refuses anon`, `HTTP ${res.status}`);
     continue;
   }
+
   if (res.ok) {
-    let rows;
+    let rows = null;
     try {
       rows = JSON.parse(body);
     } catch {
-      rows = null;
+      /* leave null */
     }
-    // An empty array means RLS filtered everything, which is safe but weaker
-    // than a hard refusal - worth seeing in the output.
     if (Array.isArray(rows) && rows.length === 0) {
-      ok(`${table} returns nothing to anon`, 'HTTP 200 with an empty result (RLS filtered)');
-    } else {
-      bad(
-        `${table} LEAKED DATA TO AN ANONYMOUS CALLER`,
-        `HTTP 200: ${body.slice(0, 160)}`,
+      rlsOnly.push(table);
+      ok(
+        `${table} exists and returns nothing to anon`,
+        'HTTP 200, empty - the query RAN and RLS filtered it; anon still holds SELECT',
       );
+    } else {
+      leaks.push(table);
+      bad(`${table} LEAKED DATA TO AN ANONYMOUS CALLER`, `HTTP 200: ${body.slice(0, 160)}`);
     }
     continue;
   }
-  ok(`${table} refuses anon`, `HTTP ${res.status}`);
+
+  ok(`${table} exists and refuses anon`, `HTTP ${res.status}`);
 }
 
-console.log('\nanonymous RPC calls (must be refused):');
+if (missing.length === TABLES.length) {
+  console.log('\nNone of the expected tables exist - the migrations have not been applied.');
+  console.log('Run supabase/migrations/*.sql in the dashboard SQL editor, in filename order.');
+  process.exit(2);
+}
+
+// --- functions -------------------------------------------------------------
+// PostgREST returns 404 both for a function that does not exist and for one the
+// caller may not execute, and anon was revoked from all four. So a public key
+// cannot confirm they exist - only that they are not reachable, which is the
+// property that matters here. Their behaviour is covered by supabase/tests.
+console.log('\nfunctions (must not be callable anonymously):');
+
 for (const fn of RPCS) {
   const res = await fetch(`${url}/rest/v1/rpc/${fn}`, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
   });
-  // 404 also counts: PostgREST hides a function anon cannot execute.
-  if (res.status === 401 || res.status === 403 || res.status === 404) {
-    ok(`${fn}() refuses anon`, `HTTP ${res.status}`);
+  if ([401, 403, 404].includes(res.status)) {
+    ok(`${fn}() is not callable by anon`, `HTTP ${res.status}`);
   } else {
     const body = await res.text();
-    bad(`${fn}() was callable by anon`, `HTTP ${res.status}: ${body.slice(0, 160)}`);
+    bad(`${fn}() WAS CALLABLE BY ANON`, `HTTP ${res.status}: ${body.slice(0, 160)}`);
+    leaks.push(`rpc:${fn}`);
   }
 }
 
@@ -181,31 +173,66 @@ const listed = await fetch(`${url}/storage/v1/object/list/documents`, {
   body: JSON.stringify({ prefix: '', limit: 1 }),
 });
 if (listed.ok) {
-  const rows = await listed.json();
+  const rows = await listed.json().catch(() => null);
   if (Array.isArray(rows) && rows.length === 0) {
     ok('documents bucket lists nothing to anon', 'HTTP 200, empty');
   } else {
+    leaks.push('storage:list');
     bad('documents bucket LISTED OBJECTS TO ANON', JSON.stringify(rows).slice(0, 160));
   }
 } else {
   ok('documents bucket refuses anon listing', `HTTP ${listed.status}`);
 }
 
-// A public bucket serves this path without auth; a private one must not.
+// A public bucket serves this path with no auth at all; a private one must not.
 const pub = await fetch(`${url}/storage/v1/object/public/documents/probe.txt`);
-if (pub.status === 400 || pub.status === 404) {
-  ok('documents bucket is not public', `HTTP ${pub.status} on the public path`);
-} else if (pub.ok) {
+if (pub.ok) {
+  leaks.push('storage:public');
   bad('documents bucket appears to be PUBLIC', 'the public object path served a response');
 } else {
-  ok('documents bucket is not public', `HTTP ${pub.status}`);
+  ok('documents bucket is not public', `HTTP ${pub.status} on the public path`);
 }
 
+// --- auth configuration ----------------------------------------------------
+console.log('\nauth configuration:');
+
+const settings = await fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } });
+if (!settings.ok) {
+  bad('read auth settings', `HTTP ${settings.status}`);
+} else {
+  const cfg = await settings.json();
+  // mailer_autoconfirm true would mean accounts are usable before anyone proves
+  // they own the address - on a platform where the address identifies a
+  // landlord to their tenant, that matters.
+  if (cfg.mailer_autoconfirm === false) ok('email confirmation is required');
+  else bad('email confirmation is OFF', 'Authentication -> Providers -> Email -> Confirm email');
+
+  if (cfg.external?.email) ok('email sign-in is enabled');
+  else bad('email sign-in is disabled', 'the app has no other configured provider');
+
+  if (cfg.disable_signup === false) ok('sign-ups are open');
+  else bad('sign-ups are disabled', 'new users cannot register');
+}
+
+// --- summary ---------------------------------------------------------------
 console.log(`\n${passed}/${passed + failed} checks passed`);
-if (failed > 0) {
+
+if (leaks.length > 0) {
   console.log(
-    '\nA FAIL is either a missing object (migrations incomplete) or data reachable\n' +
-      'without signing in. Read the detail line; the second kind blocks wiring the app.',
+    `\nDATA IS REACHABLE WITHOUT SIGNING IN: ${leaks.join(', ')}\n` +
+      'Do not wire the app to this project until that is fixed.',
+  );
+} else if (failed > 0) {
+  console.log('\nNothing leaked. The failures above are missing objects or configuration.');
+}
+
+if (rlsOnly.length > 0) {
+  console.log(
+    `\nNote: anon can still execute queries against ${rlsOnly.length} table(s) - ` +
+      'nothing comes back,\nbut RLS is the only thing stopping it. Apply ' +
+      'supabase/migrations/20260904120300_harden_anon.sql\nto revoke the privilege ' +
+      'outright, so no policy mistake can expose them.',
   );
 }
+
 process.exit(failed === 0 ? 0 : 1);

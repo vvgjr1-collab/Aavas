@@ -62,6 +62,19 @@ const SUPABASE_PRELUDE = `
   grant usage on schema auth to anon, authenticated;
   grant execute on function auth.uid() to anon, authenticated;
 
+  -- Supabase grants every new object in public to anon and authenticated
+  -- through default privileges. Without this the harness is stricter than the
+  -- real project, and an anon test would pass for a reason that does not hold
+  -- in production - which is exactly what happened until a live run showed
+  -- tables answering anon with "200, empty" instead of a permission error.
+  grant usage on schema public to anon, authenticated, service_role;
+  alter default privileges in schema public
+    grant all on tables to anon, authenticated, service_role;
+  alter default privileges in schema public
+    grant all on functions to anon, authenticated, service_role;
+  alter default privileges in schema public
+    grant all on sequences to anon, authenticated, service_role;
+
   -- Minimal storage shim: enough for the bucket policies to compile and for
   -- the path logic to be exercised. Not Supabase's real storage layer.
   create table if not exists storage.buckets (
