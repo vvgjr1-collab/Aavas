@@ -234,6 +234,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                   )}
                 />
                 <button
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
@@ -276,6 +277,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                   )}
                 />
                 <button
+                  aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"

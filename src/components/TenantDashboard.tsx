@@ -143,6 +143,7 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
       {/* Header with Back Button */}
       <div className="flex items-center justify-between mb-8">
         <Button
+          aria-label="Switch role"
           variant="ghost"
           onClick={onBack}
           className="p-2 hover:bg-muted rounded-full"

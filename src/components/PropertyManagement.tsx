@@ -228,6 +228,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
         className="flex items-center space-x-4 mb-6"
       >
         <Button
+          aria-label="Go back"
           variant="ghost"
           onClick={onBack}
           className="p-2 hover:bg-muted rounded-full"
@@ -486,6 +487,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                 </div>
               </div>
               <Button
+                aria-label="Close chat"
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsChatOpen(false)}
@@ -540,6 +542,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                 className="flex-1 border-[#2e3a8c]/30 focus-visible:ring-[#2e3a8c]"
               />
               <Button
+                aria-label="Send message"
                 onClick={handleSendMessage}
                 className="bg-[#ff914d] hover:bg-[#e57a38] text-white"
                 size="icon"

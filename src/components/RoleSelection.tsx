@@ -27,6 +27,7 @@ export function RoleSelection({ userName, onRoleSelect, onBack }: RoleSelectionP
         className="mb-6"
       >
         <Button
+          aria-label="Go back"
           variant="ghost"
           onClick={onBack}
           className="p-2 hover:bg-muted rounded-full"

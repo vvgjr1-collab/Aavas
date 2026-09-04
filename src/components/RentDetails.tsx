@@ -508,6 +508,7 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
         className="flex items-center space-x-4 mb-6"
       >
         <Button
+          aria-label="Go back"
           variant="ghost"
           onClick={onBack}
           className="p-2 rounded-full"

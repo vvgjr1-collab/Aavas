@@ -201,6 +201,7 @@ export function LandlordDashboard({
       >
         <div className="flex items-center space-x-4">
           <Button
+            aria-label="Switch role"
             variant="ghost"
             onClick={onBack}
             className="p-2 hover:bg-muted rounded-full"
@@ -376,6 +377,7 @@ export function LandlordDashboard({
                   </div>
                   <div className="absolute top-3 right-3 flex space-x-2">
                     <Button
+                      aria-label={`View ${property.title}`}
                       variant="ghost"
                       size="sm"
                       className="bg-white/90 hover:bg-white text-[#2e3a8c]"
@@ -384,6 +386,7 @@ export function LandlordDashboard({
                       <Eye className="w-4 h-4" />
                     </Button>
                     <Button
+                      aria-label={`Edit ${property.title}`}
                       variant="ghost"
                       size="sm"
                       className="bg-white/90 hover:bg-white text-[#2e3a8c]"
@@ -392,6 +395,7 @@ export function LandlordDashboard({
                       <Edit className="w-4 h-4" />
                     </Button>
                     <Button
+                      aria-label={`Delete ${property.title}`}
                       variant="ghost"
                       size="sm"
                       className="bg-white/90 hover:bg-white text-destructive hover:text-destructive"
@@ -478,6 +482,7 @@ export function LandlordDashboard({
                           </div>
                           <div className="flex space-x-2">
                             <Button
+                              aria-label={`Call ${property.tenant?.name}`}
                               variant="ghost"
                               size="sm"
                               className="text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30"
@@ -490,6 +495,7 @@ export function LandlordDashboard({
                               <Phone className="w-4 h-4" />
                             </Button>
                             <Button
+                              aria-label={`Email ${property.tenant?.name}`}
                               variant="ghost"
                               size="sm"
                               className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"

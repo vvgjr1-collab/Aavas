@@ -205,6 +205,7 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
         className="flex items-center space-x-4 mb-6"
       >
         <Button
+          aria-label="Go back"
           variant="ghost"
           onClick={onBack}
           className="p-2 rounded-full"
@@ -384,12 +385,15 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                       <div className="flex items-center justify-between">
                         <div className="flex space-x-2">
                           <Button variant="outline" size="sm">
+                            aria-label="Attach a file"
                             <Paperclip className="w-4 h-4" />
                           </Button>
                           <Button variant="outline" size="sm">
+                            aria-label="Attach an image"
                             <Image className="w-4 h-4" />
                           </Button>
                           <Button variant="outline" size="sm">
+                            aria-label="Record a voice message"
                             <Mic className="w-4 h-4" />
                           </Button>
                         </div>

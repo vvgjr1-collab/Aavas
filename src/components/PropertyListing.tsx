@@ -273,6 +273,7 @@ export function PropertyListing({ userName, userEmail, onBack, onAddProperty }: 
         className="flex items-center space-x-4 mb-6"
       >
         <Button
+          aria-label="Go back"
           variant="ghost"
           onClick={onBack}
           className="p-2 hover:bg-[#f4eedf] dark:hover:bg-[#2e3a8c]/30 rounded-full"
@@ -618,6 +619,7 @@ export function PropertyListing({ userName, userEmail, onBack, onAddProperty }: 
                                   <Camera className="w-6 h-6 text-[#ff914d]" />
                                 </div>
                                 <Button
+                                  aria-label="Remove image"
                                   variant="ghost"
                                   size="sm"
                                   className="absolute -top-2 -right-2 w-6 h-6 p-0 bg-[#ff914d] hover:bg-[#e57a38] text-white rounded-full"
