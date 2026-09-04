@@ -26,6 +26,7 @@ import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from 'sonner';
 
 interface LandlordContactProps {
@@ -234,6 +235,12 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
           >
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) =>
+                setActiveTab(value as 'call' | 'message' | 'history')
+              }
+            >
             <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
               <CardHeader>
                 <div className="flex items-center space-x-4">
@@ -257,7 +264,11 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                 </div>
                 
                 {/* Tab Navigation */}
-                <div className="flex space-x-1 p-1 rounded-lg mt-4" style={{ backgroundColor: 'rgba(74, 189, 172, 0.1)' }}>
+                <TabsList
+                  asChild
+                  className="flex w-full h-auto space-x-1 p-1 rounded-lg mt-4 bg-transparent text-inherit"
+                >
+                <div style={{ backgroundColor: 'rgba(74, 189, 172, 0.1)' }}>
                   {[
                     { id: 'call', icon: Phone, label: 'Call' },
                     { id: 'message', icon: MessageSquare, label: 'Text' },
@@ -265,8 +276,13 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                   ].map((tab) => {
                     const IconComponent = tab.icon;
                     return (
-                      <Button
+                      <TabsTrigger
                         key={tab.id}
+                        value={tab.id}
+                        asChild
+                        className="h-auto flex-1 rounded-md border-0 bg-transparent data-[state=active]:bg-transparent"
+                      >
+                      <Button
                         variant={activeTab === tab.id ? "default" : "ghost"}
                         className="flex-1"
                         style={activeTab === tab.id 
@@ -283,19 +299,20 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                             e.currentTarget.style.backgroundColor = 'transparent';
                           }
                         }}
-                        onClick={() => setActiveTab(tab.id as 'call' | 'message' | 'history')}
                       >
                         <IconComponent className="w-4 h-4 mr-2" />
                         {tab.label}
                       </Button>
+                      </TabsTrigger>
                     );
                   })}
                 </div>
+                </TabsList>
               </CardHeader>
 
               <CardContent>
                 {/* Call Interface */}
-                {activeTab === 'call' && (
+                <TabsContent value="call">
                   <div className="space-y-6">
                     {!isCallActive ? (
                       <div className="text-center space-y-4">
@@ -343,10 +360,11 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                       </div>
                     )}
                   </div>
-                )}
+
+                </TabsContent>
 
                 {/* Text Interface */}
-                {activeTab === 'message' && (
+                <TabsContent value="message">
                   <div className="space-y-4">
                     {/* Quick Message Templates */}
                     <div>
@@ -426,10 +444,11 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                       </p>
                     </div>
                   </div>
-                )}
+
+                </TabsContent>
 
                 {/* History Interface */}
-                {activeTab === 'history' && (
+                <TabsContent value="history">
                   <div className="space-y-4">
                     <div className="text-sm text-muted-foreground mb-4">
                       Recent communication history with {landlordData.name}
@@ -494,9 +513,10 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                       </div>
                     )}
                   </div>
-                )}
+                </TabsContent>
               </CardContent>
             </Card>
+            </Tabs>
           </motion.div>
         </div>
 

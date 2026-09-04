@@ -17,6 +17,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 interface RentDetailsProps {
   userName: string;
@@ -528,62 +529,81 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
         </div>
       </motion.div>
 
-      {/* Tab Navigation */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        className="flex space-x-1 rounded-lg p-1"
-        style={{ backgroundColor: 'rgba(44, 122, 123, 0.1)' }}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as 'agreement' | 'history')}
+        className="gap-6"
       >
-        <Button
-          variant={activeTab === 'agreement' ? 'default' : 'ghost'}
-          className="flex-1 text-white"
-          style={activeTab === 'agreement' ? { backgroundColor: 'var(--tenant-primary)' } : { color: 'var(--tenant-primary)' }}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'agreement') {
-              e.currentTarget.style.backgroundColor = 'rgba(44, 122, 123, 0.2)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (activeTab !== 'agreement') {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }
-          }}
-          onClick={() => setActiveTab('agreement')}
+        {/* Tab Navigation */}
+        <TabsList
+          asChild
+          className="flex w-full h-auto space-x-1 rounded-lg p-1 bg-transparent text-inherit"
         >
-          <FileText className="w-4 h-4 mr-2" />
-          Rent Agreement
-        </Button>
-        <Button
-          variant={activeTab === 'history' ? 'default' : 'ghost'}
-          className="flex-1 text-white"
-          style={activeTab === 'history' ? { backgroundColor: 'var(--tenant-primary)' } : { color: 'var(--tenant-primary)' }}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'history') {
-              e.currentTarget.style.backgroundColor = 'rgba(44, 122, 123, 0.2)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (activeTab !== 'history') {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }
-          }}
-          onClick={() => setActiveTab('history')}
-        >
-          <CreditCard className="w-4 h-4 mr-2" />
-          Payment History
-        </Button>
-      </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            style={{ backgroundColor: 'rgba(44, 122, 123, 0.1)' }}
+          >
+            <TabsTrigger
+              value="agreement"
+              asChild
+              className="h-auto flex-1 rounded-md border-0 bg-transparent data-[state=active]:bg-transparent"
+            >
+              <Button
+                variant={activeTab === 'agreement' ? 'default' : 'ghost'}
+                className="flex-1 text-white"
+                style={activeTab === 'agreement' ? { backgroundColor: 'var(--tenant-primary)' } : { color: 'var(--tenant-primary)' }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== 'agreement') {
+                    e.currentTarget.style.backgroundColor = 'rgba(44, 122, 123, 0.2)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== 'agreement') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Rent Agreement
+              </Button>
+            </TabsTrigger>
+            <TabsTrigger
+              value="history"
+              asChild
+              className="h-auto flex-1 rounded-md border-0 bg-transparent data-[state=active]:bg-transparent"
+            >
+              <Button
+                variant={activeTab === 'history' ? 'default' : 'ghost'}
+                className="flex-1 text-white"
+                style={activeTab === 'history' ? { backgroundColor: 'var(--tenant-primary)' } : { color: 'var(--tenant-primary)' }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== 'history') {
+                    e.currentTarget.style.backgroundColor = 'rgba(44, 122, 123, 0.2)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== 'history') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <CreditCard className="w-4 h-4 mr-2" />
+                Payment History
+              </Button>
+            </TabsTrigger>
+          </motion.div>
+        </TabsList>
 
-      {/* Content Area */}
-      <motion.div
-        key={activeTab}
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        {activeTab === 'agreement' ? (
+        {/* Content Area */}
+        <TabsContent value="agreement" asChild>
+          <motion.div
+            key="agreement"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+          >
           <div className="space-y-6">
             {/* Rent Agreement Section */}
             <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
@@ -708,7 +728,16 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
               </CardContent>
             </Card>
           </div>
-        ) : (
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="history" asChild>
+          <motion.div
+            key="history"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+          >
           <div className="space-y-6">
             {/* Payment History Section */}
             <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
@@ -807,8 +836,9 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
               </CardContent>
             </Card>
           </div>
-        )}
-      </motion.div>
+          </motion.div>
+        </TabsContent>
+      </Tabs>
     </motion.div>
   );
 }
