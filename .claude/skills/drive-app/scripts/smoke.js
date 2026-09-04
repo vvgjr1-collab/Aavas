@@ -13,7 +13,7 @@ const SETTLE = BASE.startsWith('http://localhost') ? 3200 : 6500;
 
 // hash route -> a string that must appear on that screen
 const ROUTES = [
-  ['#/', 'Everything You Need'],
+  ['#/', 'Everything you need'],
   ['#/login', 'Welcome back'],
   ['#/signup', 'Create account'],
   ['#/role', 'Welcome,'],
@@ -32,7 +32,7 @@ const ROUTES = [
 const GUARDS = [
   ['#/tenant/utilities/book', '#/tenant/utilities', 'Utility Services'],
   ['#/landlord/properties/999', '#/landlord', 'Property Portfolio'],
-  ['#/nope-not-a-route', '#/', 'Everything You Need'],
+  ['#/nope-not-a-route', '#/', 'Everything you need'],
 ];
 
 async function main() {

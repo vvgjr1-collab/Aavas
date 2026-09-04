@@ -152,7 +152,7 @@ export function UtilityServices({ userName, onBack, onBookService }: UtilityServ
       </div>
 
       {/* Service Categories */}
-      <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+      <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
         <CardHeader>
           <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
             Service Categories
@@ -187,7 +187,7 @@ export function UtilityServices({ userName, onBack, onBookService }: UtilityServ
                   }}
                   onClick={() => setSelectedCategory(category.id)}
                 >
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.2)' : category.color }}>
+                  <div className="w-8 h-8 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]" style={{ backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.2)' : category.color }}>
                     <IconComponent className="w-4 h-4 text-white" />
                   </div>
                   <span className="text-xs text-center leading-tight">
@@ -215,14 +215,14 @@ export function UtilityServices({ userName, onBack, onBookService }: UtilityServ
           {filteredProviders.map((provider) => {
             const CategoryIcon = getCategoryIcon(provider.category);
             return (
-              <Card key={provider.id} className="border-2 transition-all duration-200" style={{ borderColor: 'var(--tenant-primary)' }}
+              <Card key={provider.id} className="shadow-[var(--shadow-md)] lift border transition-all duration-200" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}
                 onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--tenant-primary-dark)'}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--tenant-primary)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)'}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: getCategoryColor(provider.category) }}>
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]" style={{ backgroundColor: getCategoryColor(provider.category) }}>
                         <CategoryIcon className="w-5 h-5 text-white" />
                       </div>
                       <div>
@@ -281,9 +281,9 @@ export function UtilityServices({ userName, onBack, onBookService }: UtilityServ
 
                   <Button
                     className="w-full"
-                    style={{ backgroundColor: 'var(--tenant-accent)', color: 'var(--tenant-primary)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--tenant-accent-dark)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--tenant-accent)'}
+                    style={{ backgroundColor: 'var(--tenant-primary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--tenant-primary-dark)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--tenant-primary)'}
                     onClick={() => onBookService(provider)}
                   >
                     Book Service
@@ -296,7 +296,7 @@ export function UtilityServices({ userName, onBack, onBookService }: UtilityServ
       </div>
 
       {filteredProviders.length === 0 && (
-        <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+        <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
           <CardContent className="text-center py-12">
             <Wrench className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg mb-2">No providers found</h3>

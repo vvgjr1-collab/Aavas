@@ -142,7 +142,7 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
         transition={{ duration: 0.5 }}
         className="w-full max-w-4xl mx-auto space-y-6"
       >
-        <Card className="border-2 bg-gradient-to-br" style={{ borderColor: 'var(--tenant-success)', backgroundColor: 'rgba(122, 216, 158, 0.1)' }}>
+        <Card className="shadow-[var(--shadow-md)] border bg-gradient-to-br" style={{ borderColor: 'color-mix(in srgb, var(--tenant-success) 22%, transparent)', backgroundColor: 'rgba(122, 216, 158, 0.1)' }}>
           <CardContent className="text-center py-12">
             <CheckCircle className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--tenant-success-dark)' }} />
             <h2 className="text-2xl mb-2" style={{ color: 'var(--tenant-success-dark)' }}>
@@ -240,7 +240,7 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
           >
-            <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+            <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
               <CardHeader>
                 <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
                   Select Complaint Category
@@ -275,7 +275,7 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
                         }}
                         onClick={() => setSelectedCategory(category.id)}
                       >
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.2)' : category.color }}>
+                        <div className="w-8 h-8 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]" style={{ backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.2)' : category.color }}>
                           <IconComponent className="w-4 h-4 text-white" />
                         </div>
                         <span className="text-xs text-center leading-tight">
@@ -302,7 +302,7 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.5 }}
           >
-            <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+            <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
               <CardHeader>
                 <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
                   Complaint Details
@@ -405,7 +405,7 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.5 }}
           >
-            <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+            <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
               <CardHeader>
                 <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
                   Your Information
@@ -434,7 +434,7 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.5 }}
           >
-            <Card className="border-2" style={{ borderColor: 'var(--tenant-error)', backgroundColor: 'rgba(217, 83, 79, 0.05)' }}>
+            <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-error) 22%, transparent)', backgroundColor: 'rgba(217, 83, 79, 0.05)' }}>
               <CardHeader>
                 <div className="flex items-center space-x-2">
                   <AlertTriangle className="w-5 h-5" style={{ color: 'var(--tenant-error)' }} />
@@ -468,7 +468,7 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.5 }}
           >
-            <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+            <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
               <CardContent className="pt-6">
                 <Button
                   onClick={handleSubmitComplaint}

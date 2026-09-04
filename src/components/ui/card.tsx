@@ -2,12 +2,16 @@ import * as React from "react";
 
 import { cn } from "./utils";
 
+// Cards read as a sheet of material floating over the page: a hairline edge, a
+// layered shadow for depth, and a large continuous-feeling corner radius. The
+// shadow does the work a heavy border used to do.
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border",
+        "bg-card text-card-foreground flex flex-col gap-6 rounded-2xl border border-[var(--hairline)]",
+        "shadow-[var(--shadow-sm)] transition-[box-shadow,transform,border-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
         className,
       )}
       {...props}
@@ -32,7 +36,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <h4
       data-slot="card-title"
-      className={cn("leading-none", className)}
+      className={cn("leading-none tracking-[-0.018em] font-semibold", className)}
       {...props}
     />
   );

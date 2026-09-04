@@ -72,7 +72,7 @@ export function RoleSelection({ userName, onRoleSelect, onBack }: RoleSelectionP
           className="group cursor-pointer"
           onClick={() => onRoleSelect('tenant')}
         >
-          <Card className="h-full border-2 border-transparent hover:border-[#2C7A7B]/50 transition-all duration-300 shadow-lg hover:shadow-xl bg-gradient-to-br from-[#FFFBDE]/30 to-[#f4eedf]/50 dark:from-[#2C7A7B]/20 dark:to-[#2C7A7B]/10">
+          <Card className="h-full border border-transparent hover:border-[#2C7A7B]/40 transition-all duration-300 shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-lg)] bg-gradient-to-br from-[#FFFBDE]/30 to-[#f4eedf]/50 dark:from-[#2C7A7B]/20 dark:to-[#2C7A7B]/10">
             <CardHeader className="text-center pb-6">
               <motion.div
                 className="w-20 h-20 bg-[#2C7A7B] rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#234E52] transition-colors duration-300"
@@ -91,19 +91,19 @@ export function RoleSelection({ userName, onRoleSelect, onBack }: RoleSelectionP
             <CardContent className="space-y-4">
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--tenant-accent-dark)' }}></div>
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--tenant-primary)' }}></div>
                   <span>Communicate with your landlord</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--tenant-accent-dark)' }}></div>
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--tenant-primary)' }}></div>
                   <span>Register complaints</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--tenant-accent-dark)' }}></div>
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--tenant-primary)' }}></div>
                   <span>Pay rent on time</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--tenant-accent-dark)' }}></div>
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--tenant-primary)' }}></div>
                   <span>Book services in an instant</span>
                 </li>
               </ul>
@@ -133,7 +133,7 @@ export function RoleSelection({ userName, onRoleSelect, onBack }: RoleSelectionP
           className="group cursor-pointer"
           onClick={() => onRoleSelect('landlord')}
         >
-          <Card className="h-full border-2 border-transparent hover:border-[#2e3a8c]/50 transition-all duration-300 shadow-lg hover:shadow-xl bg-gradient-to-br from-[#f4eedf]/30 to-[#f4eedf]/50 dark:from-[#2e3a8c]/20 dark:to-[#2e3a8c]/10">
+          <Card className="h-full border border-transparent hover:border-[#2e3a8c]/40 transition-all duration-300 shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-lg)] bg-gradient-to-br from-[#f4eedf]/30 to-[#f4eedf]/50 dark:from-[#2e3a8c]/20 dark:to-[#2e3a8c]/10">
             <CardHeader className="text-center pb-6">
               <motion.div
                 className="w-20 h-20 bg-[#2e3a8c] rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-[#1f2861] transition-colors duration-300"

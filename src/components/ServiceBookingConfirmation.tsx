@@ -64,7 +64,7 @@ export function ServiceBookingConfirmation({
   if (isBookingConfirmed) {
     return (
       <div className="w-full max-w-4xl mx-auto space-y-6">
-        <Card className="border-2 bg-gradient-to-br" style={{ borderColor: 'var(--tenant-success)', backgroundColor: 'rgba(122, 216, 158, 0.1)' }}>
+        <Card className="shadow-[var(--shadow-md)] border bg-gradient-to-br" style={{ borderColor: 'color-mix(in srgb, var(--tenant-success) 22%, transparent)', backgroundColor: 'rgba(122, 216, 158, 0.1)' }}>
           <CardContent className="text-center py-12">
             <CheckCircle className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--tenant-success-dark)' }} />
             <h2 className="text-2xl mb-2" style={{ color: 'var(--tenant-success-dark)' }}>
@@ -154,7 +154,7 @@ export function ServiceBookingConfirmation({
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Service Provider Info */}
         <div className="lg:col-span-1">
-          <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+          <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
             <CardHeader>
               <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
                 Service Provider
@@ -209,7 +209,7 @@ export function ServiceBookingConfirmation({
 
         {/* Booking Form */}
         <div className="lg:col-span-2">
-          <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+          <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
             <CardHeader>
               <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
                 Booking Details

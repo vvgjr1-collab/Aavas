@@ -241,7 +241,7 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                 setActiveTab(value as 'call' | 'message' | 'history')
               }
             >
-            <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+            <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
               <CardHeader>
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--tenant-primary)' }}>
@@ -263,12 +263,11 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                   </div>
                 </div>
                 
-                {/* Tab Navigation */}
+                {/* Tab Navigation - an iOS segmented control (see ui/tabs.tsx). */}
                 <TabsList
-                  asChild
-                  className="flex w-full h-auto space-x-1 p-1 rounded-lg mt-4 bg-transparent text-inherit"
+                  className="w-full mt-4"
+                  style={{ backgroundColor: 'rgba(44, 122, 123, 0.1)' }}
                 >
-                <div style={{ backgroundColor: 'rgba(74, 189, 172, 0.1)' }}>
                   {[
                     { id: 'call', icon: Phone, label: 'Call' },
                     { id: 'message', icon: MessageSquare, label: 'Text' },
@@ -279,34 +278,13 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                       <TabsTrigger
                         key={tab.id}
                         value={tab.id}
-                        asChild
-                        className="h-auto flex-1 rounded-md border-0 bg-transparent data-[state=active]:bg-transparent"
+                        className="text-[color:var(--tenant-primary)]/70 data-[state=active]:text-[color:var(--tenant-primary)]"
                       >
-                      <Button
-                        variant={activeTab === tab.id ? "default" : "ghost"}
-                        className="flex-1"
-                        style={activeTab === tab.id 
-                          ? { backgroundColor: 'var(--tenant-primary)', color: 'white' } 
-                          : { color: 'var(--tenant-primary)' }
-                        }
-                        onMouseEnter={(e) => {
-                          if (activeTab !== tab.id) {
-                            e.currentTarget.style.backgroundColor = 'rgba(74, 189, 172, 0.2)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (activeTab !== tab.id) {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                          }
-                        }}
-                      >
-                        <IconComponent className="w-4 h-4 mr-2" />
+                        <IconComponent className="w-4 h-4" />
                         {tab.label}
-                      </Button>
                       </TabsTrigger>
                     );
                   })}
-                </div>
                 </TabsList>
               </CardHeader>
 
@@ -528,7 +506,7 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.5 }}
           >
-            <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+            <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
               <CardHeader>
                 <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
                   Contact Details
@@ -573,7 +551,7 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.5 }}
           >
-            <Card className="border-2" style={{ borderColor: '#fb923c', backgroundColor: 'rgba(251, 146, 60, 0.05)' }}>
+            <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, #fb923c 30%, transparent)', backgroundColor: 'rgba(251, 146, 60, 0.05)' }}>
               <CardHeader>
                 <div className="flex items-center space-x-2">
                   <AlertCircle className="w-5 h-5 text-orange-600" />
@@ -610,7 +588,7 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.5 }}
           >
-            <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)', backgroundColor: 'rgba(74, 189, 172, 0.05)' }}>
+            <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)', backgroundColor: 'rgba(74, 189, 172, 0.05)' }}>
               <CardHeader>
                 <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
                   Communication Tips

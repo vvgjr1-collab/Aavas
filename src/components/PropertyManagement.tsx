@@ -250,19 +250,19 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
         <TabsList className="grid w-full grid-cols-3 bg-[#f4eedf] dark:bg-[#2e3a8c]/20">
           <TabsTrigger 
             value="tenant" 
-            className="data-[state=active]:bg-[#2e3a8c] data-[state=active]:text-white"
+            className="text-[#2e3a8c]/70 data-[state=active]:text-[#2e3a8c] dark:text-white/70 dark:data-[state=active]:text-white"
           >
             Tenant Details
           </TabsTrigger>
           <TabsTrigger 
             value="rent" 
-            className="data-[state=active]:bg-[#2e3a8c] data-[state=active]:text-white"
+            className="text-[#2e3a8c]/70 data-[state=active]:text-[#2e3a8c] dark:text-white/70 dark:data-[state=active]:text-white"
           >
             Rent Status
           </TabsTrigger>
           <TabsTrigger 
             value="utilities" 
-            className="data-[state=active]:bg-[#2e3a8c] data-[state=active]:text-white"
+            className="text-[#2e3a8c]/70 data-[state=active]:text-[#2e3a8c] dark:text-white/70 dark:data-[state=active]:text-white"
           >
             Utility Bills
           </TabsTrigger>
@@ -275,7 +275,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="border-2 border-[#2e3a8c]/30 dark:border-[#2e3a8c]/50 bg-gradient-to-br from-[#f4eedf]/30 to-white dark:from-[#2e3a8c]/10 dark:to-card">
+            <Card className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/30 dark:border-[#2e3a8c]/50 bg-gradient-to-br from-[#f4eedf]/30 to-white dark:from-[#2e3a8c]/10 dark:to-card">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -359,7 +359,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
             transition={{ delay: 0.2 }}
             className="grid gap-4"
           >
-            <Card className="border-2 border-[#2e3a8c]/30 dark:border-[#2e3a8c]/50 bg-gradient-to-br from-[#f4eedf]/30 to-white dark:from-[#2e3a8c]/10 dark:to-card">
+            <Card className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/30 dark:border-[#2e3a8c]/50 bg-gradient-to-br from-[#f4eedf]/30 to-white dark:from-[#2e3a8c]/10 dark:to-card">
               <CardHeader>
                 <CardTitle className="text-[#2e3a8c] dark:text-[#4a5bb0] flex items-center">
                   <CreditCard className="w-5 h-5 mr-2" />
@@ -409,7 +409,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
             {utilityBills.map((bill, index) => {
               const IconComponent = bill.icon;
               return (
-                <Card key={index} className="border-2 border-[#2e3a8c]/30 dark:border-[#2e3a8c]/50 bg-gradient-to-br from-[#f4eedf]/30 to-white dark:from-[#2e3a8c]/10 dark:to-card">
+                <Card key={index} className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/30 dark:border-[#2e3a8c]/50 bg-gradient-to-br from-[#f4eedf]/30 to-white dark:from-[#2e3a8c]/10 dark:to-card">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
@@ -776,7 +776,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                         >
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center space-x-3">
-                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)] ${
                                 utility.status === 'paid' ? 'bg-green-100 dark:bg-green-900' : 'bg-yellow-100 dark:bg-yellow-900'
                               }`}>
                                 <UtilityIcon className={`w-5 h-5 ${

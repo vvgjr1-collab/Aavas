@@ -1,4 +1,15 @@
-import { Navigate, Outlet, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 
 import { HomePage } from '../components/HomePage';
 import { LoginForm } from '../components/LoginForm';
@@ -25,10 +36,39 @@ import { toPropertyData } from '../types/property';
  */
 
 function backgroundClass(role: 'tenant' | 'landlord' | null) {
-  const base = 'min-h-screen flex items-center justify-center p-4 bg-gradient-to-br';
-  if (role === 'landlord') return `${base} from-[#f4eedf] via-[#faf7f0] to-[#2e3a8c]/10`;
-  if (role === 'tenant') return `${base} from-[#2C7A7B]/10 via-background to-[#FFFBDE]/20`;
-  return `${base} from-background via-background to-muted/20`;
+  const base =
+    'relative min-h-screen flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br';
+  if (role === 'landlord') return `${base} from-[#f7f2e6] via-[#faf9f7] to-[#eceaf6]`;
+  if (role === 'tenant') return `${base} from-[#e9f3f3] via-background to-[#fdfbe9]`;
+  return `${base} from-background via-background to-muted/40`;
+}
+
+/**
+ * Two large, heavily blurred colour fields drifting behind the content. They
+ * are what stops a full-bleed light background from reading as dead space -
+ * the ambient light under Apple's frosted panels - and they are decorative, so
+ * they sit behind everything and take no pointer events.
+ */
+function AmbientBackdrop({ role }: { role: 'tenant' | 'landlord' | null }) {
+  const tint =
+    role === 'landlord'
+      ? ['var(--landlord-primary)', 'var(--landlord-accent)']
+      : role === 'tenant'
+        ? ['var(--tenant-primary)', 'var(--tenant-accent-dark)']
+        : ['var(--landlord-primary)', 'var(--tenant-primary)'];
+
+  return (
+    <div className="ambient" aria-hidden>
+      <div
+        className="ambient-blob animate-aurora h-[38rem] w-[38rem] -top-40 -left-32 opacity-[0.16]"
+        style={{ background: tint[0] }}
+      />
+      <div
+        className="ambient-blob animate-aurora h-[32rem] w-[32rem] -bottom-40 -right-24 opacity-[0.18]"
+        style={{ background: tint[1], animationDelay: '-7s' }}
+      />
+    </div>
+  );
 }
 
 /** Shared chrome for every screen except the landing page. */
@@ -36,20 +76,47 @@ function AppLayout() {
   const { role } = useAppState();
   return (
     <div className={backgroundClass(role)}>
-      <div className="w-full max-w-6xl mx-auto">
-        <Outlet />
+      <AmbientBackdrop role={role} />
+      <div className="relative z-10 w-full max-w-6xl mx-auto">
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </div>
     </div>
+  );
+}
+
+/**
+ * The screen-to-screen transition: the outgoing view drops back slightly and
+ * fades, the incoming one rises into place. Small distances and a decelerating
+ * curve - the point is continuity, not spectacle.
+ *
+ * The exit half only works because AnimatePresence in AppRoutes holds the old
+ * <Routes> (with its old location) mounted until this finishes; presence is
+ * propagated down through context, so this component never needs a key.
+ */
+function PageTransition({ children }: { children: ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12, scale: 0.99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.995 }}
+      transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {children}
+    </motion.div>
   );
 }
 
 function HomeRoute() {
   const navigate = useNavigate();
   return (
-    <HomePage
-      onGetStarted={() => navigate('/signup')}
-      onSignIn={() => navigate('/login')}
-    />
+    <PageTransition>
+      <HomePage
+        onGetStarted={() => navigate('/signup')}
+        onSignIn={() => navigate('/login')}
+      />
+    </PageTransition>
   );
 }
 
@@ -281,8 +348,15 @@ function PropertyManagementRoute() {
 }
 
 export function AppRoutes() {
+  const location = useLocation();
+
+  // Keying <Routes> by pathname makes each screen a presence child: the old
+  // tree stays mounted (still rendering the old location) while it animates
+  // out, then the new one animates in. mode="wait" keeps the two from
+  // overlapping, and initial={false} stops a first paint from animating.
   return (
-    <Routes>
+    <AnimatePresence mode="wait" initial={false}>
+      <Routes location={location} key={location.pathname}>
       <Route path="/" element={<HomeRoute />} />
       <Route element={<AppLayout />}>
         <Route path="/login" element={<LoginRoute />} />
@@ -300,7 +374,8 @@ export function AppRoutes() {
         <Route path="/landlord/properties/new" element={<PropertyListingRoute />} />
         <Route path="/landlord/properties/:id" element={<PropertyManagementRoute />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AnimatePresence>
   );
 }

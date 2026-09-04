@@ -269,7 +269,7 @@ export function LoginForm({ onSwitchToSignup, onAuthSuccess, onBack, onGuestLogi
               Don't have an account?{' '}
               <button
                 onClick={onSwitchToSignup}
-                className="text-primary hover:underline transition-all duration-200"
+                className="text-sm font-medium text-primary hover:underline transition-all duration-200"
               >
                 Sign up
               </button>
@@ -282,7 +282,7 @@ export function LoginForm({ onSwitchToSignup, onAuthSuccess, onBack, onGuestLogi
                 Or continue as a guest{' '}
                 <button
                   onClick={onGuestLogin}
-                  className="text-primary hover:underline transition-all duration-200"
+                  className="text-sm font-medium text-primary hover:underline transition-all duration-200"
                 >
                   Guest login
                 </button>

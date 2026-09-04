@@ -207,7 +207,7 @@ export function PropertyListing({ userName, userEmail, onBack, onAddProperty }: 
         transition={{ duration: 0.5 }}
         className="w-full max-w-4xl mx-auto space-y-6"
       >
-        <Card className="border-2 border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50/50 to-green-100/30 dark:from-green-950/30 dark:to-green-900/20">
+        <Card className="shadow-[var(--shadow-md)] border border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50/50 to-green-100/30 dark:from-green-950/30 dark:to-green-900/20">
           <CardContent className="text-center py-12">
             <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
             <h2 className="text-2xl mb-2 text-green-700 dark:text-green-300">
@@ -298,7 +298,7 @@ export function PropertyListing({ userName, userEmail, onBack, onAddProperty }: 
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
           >
-            <Card className="border-2 border-[#2e3a8c]/30 dark:border-[#2e3a8c] sticky top-6">
+            <Card className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/30 dark:border-[#2e3a8c] sticky top-6">
               <CardHeader>
                 <CardTitle className="text-lg text-[#2e3a8c] dark:text-[#4a5bb0]">
                   Progress
@@ -355,7 +355,7 @@ export function PropertyListing({ userName, userEmail, onBack, onAddProperty }: 
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.5 }}
           >
-            <Card className="border-2 border-[#ff914d]/30 dark:border-[#ff914d]/50">
+            <Card className="shadow-[var(--shadow-md)] border border-[#ff914d]/30 dark:border-[#ff914d]/50">
               <CardHeader>
                 <CardTitle className="text-lg text-[#e57a38] dark:text-[#ff914d]">
                   {steps[currentStep - 1].title}
@@ -615,7 +615,7 @@ export function PropertyListing({ userName, userEmail, onBack, onAddProperty }: 
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             {formData.images.map((image, index) => (
                               <div key={index} className="relative">
-                                <div className="aspect-square bg-[#f4eedf] dark:bg-[#2e3a8c]/30 rounded-lg flex items-center justify-center border border-[#2e3a8c]/30 dark:border-[#2e3a8c]">
+                                <div className="aspect-square bg-[#f4eedf] dark:bg-[#2e3a8c]/30 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)] border border-[#2e3a8c]/30 dark:border-[#2e3a8c]">
                                   <Camera className="w-6 h-6 text-[#ff914d]" />
                                 </div>
                                 <Button

@@ -1,20 +1,22 @@
-import React from "react";
-import { motion } from "motion/react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Building2,
+  animate,
+  motion,
+  useInView,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+} from "motion/react";
+import {
   Home,
   Shield,
   Clock,
-  ChevronRight,
   CheckCircle2,
   Users,
-  Star,
-  TrendingUp,
-  Menu,
   ArrowRight,
 } from "lucide-react";
 import { Button } from "./ui/button";
-import { Card, CardContent } from "./ui/card";
 import logoImage from "../assets/a50520d040d7cd75938aa9ef0a9e11b29117b932.png";
 
 interface HomePageProps {
@@ -22,10 +24,57 @@ interface HomePageProps {
   onSignIn: () => void;
 }
 
-export function HomePage({
-  onGetStarted,
-  onSignIn,
-}: HomePageProps) {
+/** The house entrance: rise a little, fade in, decelerate. */
+const rise = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0 },
+};
+
+/** Children of a stagger container inherit `rise` and arrive in sequence. */
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+};
+
+const inViewOnce = { once: true, amount: 0.05 } as const;
+
+/**
+ * A figure that counts up the first time it is scrolled into view. Static for
+ * anyone who has asked the OS to reduce motion.
+ */
+function CountUp({ to, suffix = "" }: { to: number; suffix?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.4 });
+  const reduced = useReducedMotion();
+  const [n, setN] = useState(reduced ? to : 0);
+
+  useEffect(() => {
+    if (!inView || reduced) return;
+    const controls = animate(0, to, {
+      duration: 1.4,
+      ease: [0.16, 1, 0.3, 1],
+      onUpdate: (v) => setN(Math.round(v)),
+    });
+    return () => controls.stop();
+  }, [inView, reduced, to]);
+
+  return (
+    <span ref={ref}>
+      {n}
+      {suffix}
+    </span>
+  );
+}
+
+export function HomePage({ onGetStarted, onSignIn }: HomePageProps) {
+  const { scrollY } = useScroll();
+  const [scrolled, setScrolled] = useState(false);
+  useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 24));
+
+  // The hero art drifts up and dims slightly as the page moves under it.
+  const artY = useTransform(scrollY, [0, 600], [0, -70]);
+  const artOpacity = useTransform(scrollY, [0, 520], [1, 0.35]);
+
   const features = [
     {
       icon: Home,
@@ -42,14 +91,12 @@ export function HomePage({
     {
       icon: Clock,
       title: "Real-time Updates",
-      description:
-        "Stay informed with instant notifications and updates",
+      description: "Stay informed with instant notifications and updates",
     },
     {
       icon: Users,
       title: "Easy Communication",
-      description:
-        "Connect with landlords or tenants effortlessly",
+      description: "Connect with landlords or tenants effortlessly",
     },
   ];
 
@@ -62,135 +109,156 @@ export function HomePage({
     "Document storage",
   ];
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#2e3a8c] via-[#1e2870] to-[#0f1540] text-white overflow-hidden">
-      {/* Hero Section */}
-      <div className="container mx-auto px-4 py-8">
-        <motion.nav
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="flex items-center justify-between mb-16"
-        >
-          <div className="flex items-center gap-3">
-            <motion.img
-              src={logoImage}
-              alt="Aavas Logo"
-              className="h-12"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            />
-            <span className="text-2xl font-aavas">Aavas</span>
-          </div>
-          <Button
-            onClick={onSignIn}
-            variant="outline"
-            className="bg-white/10 border-white/20 hover:bg-white/20 text-white backdrop-blur-sm"
-          >
-            Sign In
-          </Button>
-        </motion.nav>
+  const stats = [
+    { to: 10, suffix: "K+", label: "Properties" },
+    { to: 25, suffix: "K+", label: "Users" },
+    { to: 98, suffix: "%", label: "Satisfaction" },
+  ];
 
-        {/* Hero Content */}
-        <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-200px)]">
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-[#080b1f] text-white">
+      {/* Ambient light. Three out-of-focus colour fields drifting behind the
+          page - the depth that a flat brand-colour fill cannot give. */}
+      <div className="ambient fixed" aria-hidden>
+        <div className="ambient-blob animate-aurora h-[46rem] w-[46rem] -top-56 -left-40 bg-[#2e3a8c] opacity-60" />
+        <div
+          className="ambient-blob animate-aurora h-[38rem] w-[38rem] top-[30%] -right-40 bg-[#4abdac] opacity-25"
+          style={{ animationDelay: "-6s" }}
+        />
+        <div
+          className="ambient-blob animate-aurora h-[34rem] w-[34rem] bottom-0 left-[20%] bg-[#ff914d] opacity-[0.18]"
+          style={{ animationDelay: "-12s" }}
+        />
+      </div>
+
+      {/* Navigation. Transparent over the top of the page, then it frosts and
+          grows a hairline once content starts sliding underneath it. */}
+      <motion.header
+        initial={{ y: -24, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="sticky top-0 z-50"
+      >
+        <div
+          className={`transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            scrolled
+              ? "bg-[#080b1f]/70 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/10"
+              : "bg-transparent border-b border-transparent"
+          }`}
+        >
+          <nav className="container mx-auto flex items-center justify-between px-4 py-4">
+            <div className="flex items-center gap-3">
+              <motion.img
+                src={logoImage}
+                alt="Aavas Logo"
+                className="h-10"
+                whileHover={{ scale: 1.06, rotate: -3 }}
+                transition={{ type: "spring", stiffness: 320, damping: 18 }}
+              />
+              <span className="text-xl font-aavas tracking-tight">Aavas</span>
+            </div>
+            <Button
+              onClick={onSignIn}
+              variant="outline"
+              className="rounded-full material-dark bg-white/10 text-white hover:bg-white/20"
+            >
+              Sign In
+            </Button>
+          </nav>
+        </div>
+      </motion.header>
+
+      {/* Hero */}
+      <section className="relative z-10 container mx-auto px-4 pt-14 pb-24 lg:pt-20 lg:pb-32">
+        <div className="grid items-center gap-16 lg:grid-cols-[1.05fr_0.95fr]">
           <motion.div
-            initial={{ x: -50, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
+            variants={stagger}
+            initial="hidden"
+            animate="show"
             className="space-y-8"
           >
-            <div className="inline-block">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 text-sm"
-              >
-                ✨ India's Modern Rental Platform
-              </motion.div>
-            </div>
-
-            <h1 className="text-5xl lg:text-6xl leading-tight">
-              Simplify Your{" "}
-              <span className="bg-gradient-to-r from-[#f4eedf] to-[#4abdac] bg-clip-text text-transparent">
-                Rental Experience
+            <motion.div variants={rise} className="inline-block">
+              <span className="material-dark inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm text-white/85">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4abdac] opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#4abdac]" />
+                </span>
+                India&rsquo;s modern rental platform
               </span>
-            </h1>
+            </motion.div>
 
-            <p className="text-xl text-white/80 leading-relaxed">
-              Connect landlords and tenants on a unified
-              platform. Manage properties, track payments, and
-              communicate seamlessly—all in one place.
-            </p>
+            <motion.h1
+              variants={rise}
+              className="text-5xl leading-[1.05] font-semibold tracking-[-0.035em] text-balance lg:text-7xl"
+            >
+              Simplify your
+              <br />
+              <span className="gradient-text bg-gradient-to-r from-[#f4eedf] via-[#9fe3d9] to-[#4abdac]">
+                rental experience
+              </span>
+            </motion.h1>
 
-            <div className="flex flex-wrap gap-4">
+            <motion.p
+              variants={rise}
+              className="max-w-xl text-lg leading-relaxed text-white/65 lg:text-xl"
+            >
+              Connect landlords and tenants on a unified platform. Manage
+              properties, track payments, and communicate seamlessly&mdash;all
+              in one place.
+            </motion.p>
+
+            <motion.div variants={rise} className="flex flex-wrap gap-3">
               <Button
                 onClick={onGetStarted}
                 size="lg"
-                className="bg-white text-[#2e3a8c] hover:bg-white/90 group"
+                className="group rounded-full bg-white text-[#2e3a8c] shadow-[0_10px_40px_-12px_rgba(255,255,255,0.6)] hover:bg-white"
               >
                 Get Started
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="ml-1 h-4 w-4 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1" />
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="bg-white/10 border-white/20 hover:bg-white/20 text-white backdrop-blur-sm"
+                className="rounded-full material-dark bg-white/10 text-white hover:bg-white/20"
               >
                 Learn More
               </Button>
-            </div>
+            </motion.div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-8 pt-8 border-t border-white/10">
-              <div>
-                <div className="text-3xl">10K+</div>
-                <div className="text-white/60 text-sm">
-                  Properties
+            <motion.dl
+              variants={rise}
+              className="grid max-w-lg grid-cols-3 gap-8 border-t border-white/10 pt-8"
+            >
+              {stats.map((stat) => (
+                <div key={stat.label}>
+                  <dt className="sr-only">{stat.label}</dt>
+                  <dd className="text-3xl font-semibold tracking-[-0.03em] tabular-nums">
+                    <CountUp to={stat.to} suffix={stat.suffix} />
+                  </dd>
+                  <p className="mt-1 text-sm text-white/50">{stat.label}</p>
                 </div>
-              </div>
-              <div>
-                <div className="text-3xl">25K+</div>
-                <div className="text-white/60 text-sm">
-                  Users
-                </div>
-              </div>
-              <div>
-                <div className="text-3xl">98%</div>
-                <div className="text-white/60 text-sm">
-                  Satisfaction
-                </div>
-              </div>
-            </div>
+              ))}
+            </motion.dl>
           </motion.div>
 
-          {/* Right side - Logo showcase */}
+          {/* Hero art: the mark floating on its own pool of light. */}
           <motion.div
-            initial={{ x: 50, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="relative hidden lg:flex items-center justify-center"
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+            style={{ y: artY, opacity: artOpacity }}
+            className="relative hidden items-center justify-center lg:flex"
           >
-            <div className="relative">
-              <motion.div
-                animate={{
-                  scale: [1, 1.05, 1],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="absolute inset-0 bg-gradient-to-r from-[#4abdac]/20 to-[#f4eedf]/20 blur-3xl rounded-full"
-              />
+            <div className="absolute h-80 w-80 rounded-full bg-gradient-to-br from-[#4abdac]/40 to-[#f4eedf]/20 blur-[80px]" />
+            <div className="material-dark relative grid h-[26rem] w-[26rem] place-items-center rounded-[3rem] shadow-[0_40px_120px_-30px_rgba(0,0,0,0.8)]">
               <motion.img
                 src={logoImage}
-                alt="Aavas Logo"
-                className="relative h-80 drop-shadow-2xl"
-                animate={{
-                  y: [0, -20, 0],
-                }}
+                alt=""
+                aria-hidden
+                className="h-56 drop-shadow-2xl"
+                animate={{ y: [0, -14, 0] }}
                 transition={{
-                  duration: 3,
+                  duration: 5,
                   repeat: Infinity,
                   ease: "easeInOut",
                 }}
@@ -198,156 +266,175 @@ export function HomePage({
             </div>
           </motion.div>
         </div>
-      </div>
+      </section>
 
-      {/* Features Section */}
-      <div className="bg-white/5 backdrop-blur-sm border-t border-white/10">
-        <div className="container mx-auto px-4 py-20">
+      {/* Features */}
+      <section className="relative z-10 border-t border-white/[0.07] bg-white/[0.02]">
+        <div className="container mx-auto px-4 py-24">
           <motion.div
-            initial={{ y: 30, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="text-center mb-16"
+            variants={rise}
+            initial="hidden"
+            whileInView="show"
+            viewport={inViewOnce}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="mx-auto mb-14 max-w-2xl text-center"
           >
-            <h2 className="text-4xl mb-4">
-              Everything You Need
+            <h2 className="text-4xl font-semibold tracking-[-0.03em] lg:text-5xl">
+              Everything you need
             </h2>
-            <p className="text-white/70 text-lg">
+            <p className="mt-4 text-lg text-white/60">
               Powerful features for both landlords and tenants
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="show"
+            viewport={inViewOnce}
+            className="grid gap-5 md:grid-cols-2 lg:grid-cols-4"
+          >
+            {features.map((feature) => (
               <motion.div
                 key={feature.title}
-                initial={{ y: 30, opacity: 0 }}
-                whileInView={{ y: 0, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-colors group"
+                variants={rise}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={{ y: -6 }}
+                className="material-dark group rounded-3xl p-7 transition-colors duration-300 hover:bg-white/[0.14]"
               >
-                <div className="h-12 w-12 bg-gradient-to-br from-[#4abdac] to-[#f4eedf] rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <feature.icon className="h-6 w-6 text-[#2e3a8c]" />
+                <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-[#4abdac] to-[#f4eedf] shadow-lg transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:-rotate-6">
+                  <feature.icon className="h-6 w-6 text-[#1b2350]" />
                 </div>
-                <h3 className="text-xl mb-2">
+                <h3 className="text-lg font-semibold tracking-[-0.02em]">
                   {feature.title}
                 </h3>
-                <p className="text-white/60">
+                <p className="mt-2 text-sm leading-relaxed text-white/55">
                   {feature.description}
                 </p>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </section>
 
-      {/* Benefits Section */}
-      <div className="container mx-auto px-4 py-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      {/* Benefits */}
+      <section className="relative z-10 container mx-auto px-4 py-24">
+        <div className="grid items-center gap-14 lg:grid-cols-2">
           <motion.div
-            initial={{ x: -30, opacity: 0 }}
-            whileInView={{ x: 0, opacity: 1 }}
-            viewport={{ once: true }}
+            variants={stagger}
+            initial="hidden"
+            whileInView="show"
+            viewport={inViewOnce}
             className="space-y-6"
           >
-            <h2 className="text-4xl">
-              Built for India's{" "}
-              <span className="bg-gradient-to-r from-[#f4eedf] to-[#4abdac] bg-clip-text text-transparent">
-                Rental Market
+            <motion.h2
+              variants={rise}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="text-4xl font-semibold tracking-[-0.03em] lg:text-5xl"
+            >
+              Built for India&rsquo;s{" "}
+              <span className="gradient-text bg-gradient-to-r from-[#f4eedf] to-[#4abdac]">
+                rental market
               </span>
+            </motion.h2>
+            <motion.p
+              variants={rise}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-xl text-lg leading-relaxed text-white/60"
+            >
+              Designed specifically for Indian landlords and tenants, with the
+              features that matter most in the local rental ecosystem.
+            </motion.p>
+            <motion.div
+              variants={rise}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <Button
+                onClick={onGetStarted}
+                size="lg"
+                className="rounded-full bg-gradient-to-r from-[#4abdac] to-[#a9e5da] text-[#1b2350] hover:opacity-95"
+              >
+                Start Your Journey
+              </Button>
+            </motion.div>
+          </motion.div>
+
+          <motion.ul
+            variants={stagger}
+            initial="hidden"
+            whileInView="show"
+            viewport={inViewOnce}
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+          >
+            {benefits.map((benefit) => (
+              <motion.li
+                key={benefit}
+                variants={rise}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={{ x: 4 }}
+                className="material-dark flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-colors duration-300 hover:bg-white/[0.14]"
+              >
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-[#4abdac]" />
+                <span className="text-sm text-white/85">{benefit}</span>
+              </motion.li>
+            ))}
+          </motion.ul>
+        </div>
+      </section>
+
+      {/* Closing call to action */}
+      <section className="relative z-10 container mx-auto px-4 pb-24">
+        <motion.div
+          variants={rise}
+          initial="hidden"
+          whileInView="show"
+          viewport={inViewOnce}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          className="material-dark relative overflow-hidden rounded-[2.5rem] px-8 py-16 text-center"
+        >
+          <div
+            className="ambient-blob absolute -top-24 left-1/2 h-72 w-[36rem] -translate-x-1/2 bg-[#4abdac] opacity-25"
+            aria-hidden
+          />
+          <div className="relative">
+            <h2 className="text-4xl font-semibold tracking-[-0.03em] lg:text-5xl">
+              Ready to get started?
             </h2>
-            <p className="text-white/70 text-lg">
-              Designed specifically for Indian landlords and
-              tenants with features that matter most in the
-              local rental ecosystem.
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-white/60">
+              Join thousands of landlords and tenants who trust Aavas for their
+              rental needs.
             </p>
             <Button
               onClick={onGetStarted}
               size="lg"
-              className="bg-gradient-to-r from-[#4abdac] to-[#f4eedf] text-[#2e3a8c] hover:opacity-90"
+              className="mt-8 rounded-full bg-white text-[#2e3a8c] shadow-[0_10px_40px_-12px_rgba(255,255,255,0.6)] hover:bg-white"
             >
-              Start Your Journey
+              Create Free Account
             </Button>
-          </motion.div>
-
-          <motion.div
-            initial={{ x: 30, opacity: 0 }}
-            whileInView={{ x: 0, opacity: 1 }}
-            viewport={{ once: true }}
-            className="grid grid-cols-2 gap-4"
-          >
-            {benefits.map((benefit, index) => (
-              <motion.div
-                key={benefit}
-                initial={{ scale: 0.9, opacity: 0 }}
-                whileInView={{ scale: 1, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.05 }}
-                className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 flex items-center gap-3 hover:bg-white/10 transition-colors"
-              >
-                <CheckCircle2 className="h-5 w-5 text-[#4abdac] flex-shrink-0" />
-                <span className="text-sm">{benefit}</span>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      <div className="container mx-auto px-4 py-20">
-        <motion.div
-          initial={{ y: 30, opacity: 0 }}
-          whileInView={{ y: 0, opacity: 1 }}
-          viewport={{ once: true }}
-          className="bg-gradient-to-r from-[#4abdac]/20 to-[#f4eedf]/20 backdrop-blur-sm border border-white/20 rounded-3xl p-12 text-center"
-        >
-          <h2 className="text-4xl mb-4">
-            Ready to Get Started?
-          </h2>
-          <p className="text-white/70 text-lg mb-8 max-w-2xl mx-auto">
-            Join thousands of landlords and tenants who trust
-            Aavas for their rental needs.
-          </p>
-          <Button
-            onClick={onGetStarted}
-            size="lg"
-            className="bg-white text-[#2e3a8c] hover:bg-white/90"
-          >
-            Create Free Account
-          </Button>
+          </div>
         </motion.div>
-      </div>
+      </section>
 
-      {/* Footer */}
-      <div className="border-t border-white/10 py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-white/60 text-sm">
-            <div className="flex items-center gap-2">
-              <img
-                src={logoImage}
-                alt="Aavas"
-                className="h-6"
-              />
-              <span className="font-aavas">
-                © 2025 Aavas. All rights reserved.
-              </span>
-            </div>
-            <div className="flex gap-6">
-              <button className="hover:text-white transition-colors">
-                Privacy
+      <footer className="relative z-10 border-t border-white/[0.07] py-8">
+        <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 text-sm text-white/50 md:flex-row">
+          <div className="flex items-center gap-2">
+            <img src={logoImage} alt="" aria-hidden className="h-6" />
+            <span className="font-aavas">
+              &copy; 2025 Aavas. All rights reserved.
+            </span>
+          </div>
+          <div className="flex gap-6">
+            {["Privacy", "Terms", "Contact"].map((item) => (
+              <button
+                key={item}
+                className="transition-colors duration-200 hover:text-white"
+              >
+                {item}
               </button>
-              <button className="hover:text-white transition-colors">
-                Terms
-              </button>
-              <button className="hover:text-white transition-colors">
-                Contact
-              </button>
-            </div>
+            ))}
           </div>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }

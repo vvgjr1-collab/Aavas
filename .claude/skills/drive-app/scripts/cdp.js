@@ -113,7 +113,7 @@ async function connect({ port = DEFAULT_PORT, timeoutMs = 10000 } = {}) {
     const fs = require('fs');
     const h = (await evaluate(`Math.min(document.body.scrollHeight, ${maxHeight})`)) || 1400;
     await send('Emulation.setDeviceMetricsOverride', { width, height: h, deviceScaleFactor: 1, mobile: false });
-    await sleep(600);
+    await sleep(1600);
     const shot = await send('Page.captureScreenshot', { format: 'png' });
     await send('Emulation.clearDeviceMetricsOverride');
     if (!shot.result?.data) throw new Error('screenshot failed');

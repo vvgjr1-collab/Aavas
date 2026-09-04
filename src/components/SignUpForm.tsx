@@ -320,7 +320,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                   I agree to the{' '}
                   <button
                     type="button"
-                    className="text-primary hover:underline"
+                    className="text-sm font-medium text-primary hover:underline"
                     onClick={() => toast.info('Terms and conditions coming soon!')}
                   >
                     Terms and Conditions
@@ -328,7 +328,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                   and{' '}
                   <button
                     type="button"
-                    className="text-primary hover:underline"
+                    className="text-sm font-medium text-primary hover:underline"
                     onClick={() => toast.info('Privacy policy coming soon!')}
                   >
                     Privacy Policy
@@ -380,7 +380,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
               Already have an account?{' '}
               <button
                 onClick={onSwitchToLogin}
-                className="text-primary hover:underline transition-all duration-200"
+                className="text-sm font-medium text-primary hover:underline transition-all duration-200"
               >
                 Sign in
               </button>
@@ -393,7 +393,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                 Or continue as a{' '}
                 <button
                   onClick={onGuestLogin}
-                  className="text-primary hover:underline transition-all duration-200"
+                  className="text-sm font-medium text-primary hover:underline transition-all duration-200"
                 >
                   guest
                 </button>

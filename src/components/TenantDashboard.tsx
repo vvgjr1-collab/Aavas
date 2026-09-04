@@ -140,36 +140,50 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6">
-      {/* Header with Back Button */}
-      <div className="flex items-center justify-between mb-8">
+      {/* A frosted toolbar that stays with you as the dashboard scrolls, with
+          the page title set below it - the macOS window-title arrangement. */}
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="material sticky top-3 z-30 flex items-center justify-between rounded-2xl px-3 py-2 shadow-[var(--shadow-sm)]"
+      >
+        <div className="flex items-center gap-2 pl-1">
+          <img src={logoImage} alt="Aavas" className="h-7" />
+          <span className="text-xl font-aavas" style={{ color: 'var(--tenant-primary)' }}>Aavas</span>
+        </div>
         <Button
           aria-label="Switch role"
           variant="ghost"
           onClick={onBack}
-          className="p-2 hover:bg-muted rounded-full"
+          className="rounded-full gap-2 text-muted-foreground"
           title="Switch Role"
         >
-          <LogOut className="w-5 h-5 text-muted-foreground" />
+          <LogOut className="w-4 h-4" />
+          <span className="hidden sm:inline text-sm">Switch role</span>
         </Button>
-        <div className="text-center flex-1">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <img src={logoImage} alt="Aavas" className="h-8" />
-            <span className="text-2xl font-aavas" style={{ color: 'var(--tenant-primary)' }}>Aavas</span>
-          </div>
-          <h1 className="text-3xl mb-2" style={{ color: 'var(--tenant-primary)' }}>
-            Welcome Home, {userName}!
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Manage your rental property and stay connected
-          </p>
-        </div>
-        <div className="w-10"></div> {/* Spacer for centering */}
-      </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.06 }}
+        className="pt-4 pb-2 text-center"
+      >
+        <h1
+          className="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] text-balance"
+          style={{ color: 'var(--tenant-primary)' }}
+        >
+          Welcome Home, {userName}!
+        </h1>
+        <p className="mt-3 text-lg text-muted-foreground">
+          Manage your rental property and stay connected
+        </p>
+      </motion.div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Property Details Card */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-2 bg-gradient-to-br" style={{ borderColor: 'var(--tenant-primary)', backgroundColor: 'rgba(44, 122, 123, 0.05)' }}>
+          <Card className="shadow-[var(--shadow-md)] border bg-gradient-to-br" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)', backgroundColor: 'rgba(44, 122, 123, 0.05)' }}>
             <CardHeader className="pb-4">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--tenant-primary)' }}>
@@ -256,7 +270,7 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
           </Card>
 
           {/* Quick Actions Card - Moved here */}
-          <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+          <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
             <CardHeader className="pb-4">
               <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
                 Quick Actions
@@ -272,15 +286,15 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
                   <Button
                     key={action.id}
                     variant="ghost"
-                    className="w-full justify-start h-auto p-4 transition-all duration-200 hover:scale-105 border"
+                    className="w-full justify-start h-auto p-4 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] border"
                     style={{ 
-                      backgroundColor: 'var(--tenant-accent)', 
-                      borderColor: 'var(--tenant-primary)',
+                      backgroundColor: 'color-mix(in srgb, var(--tenant-primary) 6%, var(--card))', 
+                      borderColor: 'color-mix(in srgb, var(--tenant-primary) 16%, transparent)',
                     }}
                     onClick={() => handleActionClick(action.id)}
                   >
                     <div className="flex items-start space-x-3 text-left">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--tenant-primary)' }}>
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)] flex-shrink-0" style={{ backgroundColor: 'var(--tenant-primary)' }}>
                         <IconComponent className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -302,7 +316,7 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
         {/* Right Sidebar */}
         <div className="space-y-4">
           {/* Account Summary Card */}
-          <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+          <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
                 Account Summary
@@ -358,7 +372,7 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
           </Card>
 
           {/* Pay Rent Card */}
-          <Card className="border-2 bg-gradient-to-br" style={{ borderColor: 'var(--tenant-primary)', backgroundColor: 'rgba(44, 122, 123, 0.15)' }}>
+          <Card className="shadow-[var(--shadow-md)] border bg-gradient-to-br" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)', backgroundColor: 'rgba(44, 122, 123, 0.15)' }}>
             <CardContent className="pt-6">
               {!isRentPaid ? (
                 <div className="text-center space-y-3">
@@ -377,7 +391,7 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
                     </p>
                   </div>
                   <Button
-                    className="w-full text-white transition-all duration-200 hover:scale-105"
+                    className="w-full text-white transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
                     style={{ backgroundColor: 'var(--tenant-primary)' }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--tenant-primary-dark)'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--tenant-primary)'}
@@ -423,7 +437,7 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
           </Card>
 
           {/* Contact Landlord Card */}
-          <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)' }}>
+          <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
                 Contact Landlord
@@ -449,10 +463,10 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
               <div className="space-y-2">
                 <Button
                   variant="outline"
-                  className="w-full justify-start h-auto py-3 transition-all duration-200 hover:scale-105"
+                  className="w-full justify-start h-auto py-3 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
                   style={{ 
-                    backgroundColor: 'var(--tenant-accent)', 
-                    borderColor: 'var(--tenant-primary)',
+                    backgroundColor: 'color-mix(in srgb, var(--tenant-primary) 6%, var(--card))', 
+                    borderColor: 'color-mix(in srgb, var(--tenant-primary) 16%, transparent)',
                   }}
                   onClick={() => onNavigateToLandlordContact('call')}
                 >
@@ -465,10 +479,10 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
 
                 <Button
                   variant="outline"
-                  className="w-full justify-start h-auto py-3 transition-all duration-200 hover:scale-105"
+                  className="w-full justify-start h-auto py-3 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
                   style={{ 
-                    backgroundColor: 'var(--tenant-accent)', 
-                    borderColor: 'var(--tenant-primary)',
+                    backgroundColor: 'color-mix(in srgb, var(--tenant-primary) 6%, var(--card))', 
+                    borderColor: 'color-mix(in srgb, var(--tenant-primary) 16%, transparent)',
                   }}
                   onClick={() => onNavigateToLandlordContact('message')}
                 >
@@ -481,10 +495,10 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
 
                 <Button
                   variant="outline"
-                  className="w-full justify-start h-auto py-3 transition-all duration-200 hover:scale-105"
+                  className="w-full justify-start h-auto py-3 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
                   style={{ 
-                    backgroundColor: 'var(--tenant-accent)', 
-                    borderColor: 'var(--tenant-primary)',
+                    backgroundColor: 'color-mix(in srgb, var(--tenant-primary) 6%, var(--card))', 
+                    borderColor: 'color-mix(in srgb, var(--tenant-primary) 16%, transparent)',
                   }}
                   onClick={() => onNavigateToLandlordContact('history')}
                 >
@@ -517,7 +531,7 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
           
           <div className="space-y-6 py-4">
             {/* Payment Summary */}
-            <Card className="border-2" style={{ borderColor: 'var(--tenant-primary)', backgroundColor: 'rgba(44, 122, 123, 0.05)' }}>
+            <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)', backgroundColor: 'rgba(44, 122, 123, 0.05)' }}>
               <CardContent className="pt-4">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">

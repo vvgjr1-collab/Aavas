@@ -196,40 +196,47 @@ export function LandlordDashboard({
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.5 }}
-        className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0"
+        className="space-y-6"
       >
-        <div className="flex items-center space-x-4">
+        {/* A frosted toolbar that stays put as the portfolio scrolls, with the
+            page title set below it - the macOS window-title arrangement. */}
+        <div className="material sticky top-3 z-30 flex items-center justify-between rounded-2xl px-3 py-2 shadow-[var(--shadow-sm)]">
+          <div className="flex items-center gap-2 pl-1">
+            <img src={logoImage} alt="Aavas" className="h-7" />
+            <span className="text-xl text-[#2e3a8c] dark:text-[#4a5bb0] font-aavas">
+              Aavas
+            </span>
+          </div>
           <Button
             aria-label="Switch role"
             variant="ghost"
             onClick={onBack}
-            className="p-2 hover:bg-muted rounded-full"
+            className="rounded-full gap-2 text-muted-foreground"
             title="Switch Role"
           >
-            <LogOut className="w-5 h-5 text-muted-foreground" />
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline text-sm">Switch role</span>
           </Button>
+        </div>
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <img src={logoImage} alt="Aavas" className="h-6" />
-              <span className="text-xl text-[#2e3a8c] dark:text-[#4a5bb0] font-aavas">
-                Aavas
-              </span>
-            </div>
-            <h1 className="text-[#2e3a8c] dark:text-[#4a5bb0]">
+            <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.035em] text-[#2e3a8c] dark:text-[#4a5bb0]">
               Property Portfolio
             </h1>
-            <p className="text-muted-foreground">
+            <p className="mt-2 text-lg text-muted-foreground">
               Welcome back, {userName}! Manage your rental properties
             </p>
           </div>
+          <Button
+            onClick={onNavigateToPropertyListing}
+            size="lg"
+            className="rounded-full bg-[#2e3a8c] hover:bg-[#1f2861] text-white shrink-0"
+          >
+            <Plus className="w-5 h-5 mr-1" />
+            Add New Property
+          </Button>
         </div>
-        <Button
-          onClick={onNavigateToPropertyListing}
-          className="bg-[#2e3a8c] hover:bg-[#1f2861] text-white px-6 py-3"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add New Property
-        </Button>
       </motion.div>
 
       {/* Stats Cards */}
@@ -239,17 +246,17 @@ export function LandlordDashboard({
         transition={{ delay: 0.2, duration: 0.5 }}
         className="grid grid-cols-1 md:grid-cols-4 gap-4"
       >
-        <Card className="border-2 border-[#2e3a8c]/30 dark:border-[#2e3a8c]">
+        <Card className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/30 dark:border-[#2e3a8c]">
           <CardContent className="p-6">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-[#2e3a8c] rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-[#2e3a8c] rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
                 <Building2 className="w-6 h-6 text-white" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
                   Total Properties
                 </p>
-                <p className="text-2xl text-[#2e3a8c] dark:text-[#4a5bb0]">
+                <p className="text-3xl font-semibold tracking-[-0.03em] text-[#2e3a8c] dark:text-[#4a5bb0]">
                   {stats.totalProperties}
                 </p>
               </div>
@@ -257,15 +264,15 @@ export function LandlordDashboard({
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-green-200 dark:border-green-800">
+        <Card className="shadow-[var(--shadow-md)] border border-green-200 dark:border-green-800">
           <CardContent className="p-6">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
                 <Users className="w-6 h-6 text-white" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Occupied</p>
-                <p className="text-2xl text-green-700 dark:text-green-300">
+                <p className="text-3xl font-semibold tracking-[-0.03em] text-green-700 dark:text-green-300">
                   {stats.occupiedProperties}
                 </p>
               </div>
@@ -273,15 +280,15 @@ export function LandlordDashboard({
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-blue-200 dark:border-blue-800">
+        <Card className="shadow-[var(--shadow-md)] border border-blue-200 dark:border-blue-800">
           <CardContent className="p-6">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
                 <Home className="w-6 h-6 text-white" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Vacant</p>
-                <p className="text-2xl text-blue-700 dark:text-blue-300">
+                <p className="text-3xl font-semibold tracking-[-0.03em] text-blue-700 dark:text-blue-300">
                   {stats.vacantProperties}
                 </p>
               </div>
@@ -289,15 +296,15 @@ export function LandlordDashboard({
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-purple-200 dark:border-purple-800">
+        <Card className="shadow-[var(--shadow-md)] border border-purple-200 dark:border-purple-800">
           <CardContent className="p-6">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-purple-500 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
                 <TrendingUp className="w-6 h-6 text-white" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Monthly Revenue</p>
-                <p className="text-2xl text-purple-700 dark:text-purple-300">
+                <p className="text-3xl font-semibold tracking-[-0.03em] text-purple-700 dark:text-purple-300">
                   ₹{stats.monthlyRevenue.toLocaleString()}
                 </p>
               </div>
@@ -361,7 +368,7 @@ export function LandlordDashboard({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 * index, duration: 0.5 }}
             >
-              <Card className="border-2 border-[#2e3a8c]/30 dark:border-[#2e3a8c] hover:shadow-lg transition-all duration-200 group">
+              <Card className="shadow-[var(--shadow-md)] lift border border-[#2e3a8c]/30 dark:border-[#2e3a8c] hover:shadow-lg transition-all duration-200 group">
                 <div className="relative">
                   <ImageWithFallback
                     src={property.images[0]}
