@@ -65,7 +65,7 @@ export const initialProperties: Property[] = [
       id: '4',
       title: 'Luxury 4BHK Penthouse',
       address: 'Bandra West, Mumbai, MH 400050',
-      type: 'apartment',
+      type: 'penthouse',
       rent: 85000,
       deposit: 170000,
       bedrooms: 4,
