@@ -214,6 +214,18 @@ function RoleSelectionRoute() {
   );
 }
 
+/**
+ * Signing out returns to the landing page. Staying put would leave someone on
+ * a dashboard that has quietly become the guest demo.
+ */
+function useSignOut() {
+  const navigate = useNavigate();
+  const { signOut } = useAppState();
+  return () => {
+    void signOut().then(() => navigate('/', { replace: true }));
+  };
+}
+
 /** Leaving a dashboard drops the chosen role, as the old handler did. */
 function useBackToRoleSelection() {
   const navigate = useNavigate();
@@ -301,6 +313,7 @@ function TenantDashboardRoute() {
   const { userName, userEmail } = useDisplayUser();
   const onBack = useBackToRoleSelection();
   const { view, ready } = useTenancy();
+  const handleSignOut = useSignOut();
 
   // Hold rather than paint the demo flat and swap it a moment later.
   if (!ready) return null;
@@ -310,6 +323,7 @@ function TenantDashboardRoute() {
       userName={userName}
       userEmail={userEmail}
       property={view}
+      onSignOut={handleSignOut}
       onNavigateToRentDetails={(tab = 'agreement') => navigate(`/tenant/rent?tab=${tab}`)}
       onNavigateToUtilityServices={() => navigate('/tenant/utilities')}
       onNavigateToComplaintRegistration={() => navigate('/tenant/complaint')}
@@ -405,6 +419,7 @@ function LandlordDashboardRoute() {
   const { properties: demoProperties, updateProperty, deleteProperty, isAuthenticated } =
     useAppState();
   const { portfolio, pendingClaims, tenancies, refresh } = useTenancy();
+  const handleSignOut = useSignOut();
   const { userName, userEmail } = useDisplayUser();
   const onBack = useBackToRoleSelection();
 
@@ -416,6 +431,7 @@ function LandlordDashboardRoute() {
       userName={userName}
       userEmail={userEmail}
       properties={properties}
+      onSignOut={isAuthenticated ? handleSignOut : undefined}
       pendingClaims={isAuthenticated ? pendingClaims : []}
       tenancies={isAuthenticated ? tenancies : []}
       refreshTenancy={refresh}
@@ -492,8 +508,17 @@ function PropertyListingRoute() {
 function PropertyManagementRoute() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { properties } = useAppState();
+  const { properties: demoProperties, isAuthenticated, isLoadingSession } = useAppState();
+  const { portfolio, ready } = useTenancy();
+
+  // Looked the id up in the seed array, so a real property was never found and
+  // every visit bounced back to the portfolio.
+  const properties = isAuthenticated ? portfolio : demoProperties;
   const property = properties.find(p => p.id === id);
+
+  // Deciding before the portfolio has loaded would redirect away from a
+  // property that does exist.
+  if (isLoadingSession || (isAuthenticated && !ready)) return null;
 
   // Unknown or deleted property id.
   if (!property) return <Navigate to="/landlord" replace />;

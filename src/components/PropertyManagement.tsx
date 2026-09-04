@@ -31,6 +31,9 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Progress } from './ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { TenancyAccess } from './landlord/TenancyAccess';
+import { useTenancy } from '../context/TenancyProvider';
+import { useAppState } from '../context/AppState';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -43,6 +46,14 @@ interface PropertyManagementProps {
 }
 
 export function PropertyManagement({ property, onBack }: PropertyManagementProps) {
+  const { tenancies } = useTenancy();
+  const { userId } = useAppState();
+  // The live tenancy for this property, if there is one.
+  const tenancy =
+    tenancies.find(
+      t => t.property_id === property.id && (t.status === 'active' || t.status === 'pending'),
+    ) ?? null;
+
   const [activeTab, setActiveTab] = useState('tenant');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -245,6 +256,8 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
           </p>
         </div>
       </motion.div>
+
+      <TenancyAccess tenancy={tenancy ?? null} userId={userId} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 bg-[#f4eedf] dark:bg-[#2e3a8c]/20">

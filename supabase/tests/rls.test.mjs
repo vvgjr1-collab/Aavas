@@ -451,9 +451,114 @@ const main = async () => {
   check('a bare tenancy folder is refused', pathCases.bare, false);
   check('a null path is refused', pathCases.nul, false);
 
+  // --- co-tenants ----------------------------------------------------------
+  console.log('\nco-tenants sharing one lease:');
+
+  const secondCode = 'AAVAS-TEST-02';
+  await asUser(db, landlordA, () =>
+    db.query(
+      'insert into public.invites (tenancy_id, code, created_by) values ($1, $2, $3)',
+      [tenancyA, secondCode, landlordA],
+    ),
+  );
+
+  const joinedSecond = await asUser(db, stranger, async () => {
+    const r = await db.query('select public.redeem_invite($1) as id', [secondCode]);
+    return r.rows[0].id;
+  });
+  check('a second tenant joins the same tenancy', joinedSecond, tenancyA);
+
+  const members = await asUser(db, landlordA, async () => {
+    const r = await db.query(
+      'select count(*)::int as n from public.tenancy_members where tenancy_id = $1',
+      [tenancyA],
+    );
+    return r.rows[0].n;
+  });
+  check('the tenancy has two members', members, 2);
+
+  const coTenantSees = await asUser(db, stranger, async () => {
+    const r = await db.query('select rent::int as rent from public.tenancies where id = $1', [tenancyA]);
+    return r.rows[0] ? r.rows[0].rent : null;
+  });
+  check('the co-tenant reads the same tenancy and rent', coTenantSees, 27000);
+
+  const coSeesLandlord = await asUser(db, stranger, async () => {
+    const r = await db.query('select full_name from public.profiles where id = $1', [landlordA]);
+    return r.rows.map(x => x.full_name);
+  });
+  check('and can see the landlord', coSeesLandlord, ['Asha Landlord']);
+
+  checkDenied(
+    'a co-tenant still cannot rewrite the rent',
+    await expectDenied(db, stranger, () =>
+      db.query('update public.tenancies set rent = 1 where id = $1', [tenancyA]),
+    ),
+  );
+
+  checkDenied(
+    'the same person cannot join twice',
+    await expectDenied(db, stranger, () =>
+      db.query('select public.redeem_invite($1)', [secondCode]),
+    ),
+  );
+
+  // --- leaving -------------------------------------------------------------
+  console.log('\nleaving needs both sides:');
+
+  checkDenied(
+    'a tenant cannot end the tenancy directly',
+    await expectDenied(db, tenantA, () =>
+      db.query("update public.tenancies set status = 'ended' where id = $1", [tenancyA]),
+    ),
+  );
+
+  checkDenied(
+    'a landlord cannot end one that was never requested',
+    await expectDenied(db, landlordA, () =>
+      db.query('select public.approve_end_tenancy($1)', [tenancyA]),
+    ),
+  );
+
+  const requested = await asUser(db, tenantA, async () => {
+    await db.query('select public.request_end_tenancy($1)', [tenancyA]);
+    const r = await db.query(
+      'select end_requested_at is not null as asked, status from public.tenancies where id = $1',
+      [tenancyA],
+    );
+    return r.rows[0];
+  });
+  check('a tenant can ask to leave, and nothing ends yet', requested, { asked: true, status: 'active' });
+
+  checkDenied(
+    'an unrelated landlord cannot approve it',
+    await expectDenied(db, landlordB, () =>
+      db.query('select public.approve_end_tenancy($1)', [tenancyA]),
+    ),
+  );
+
+  const ended = await asUser(db, landlordA, async () => {
+    await db.query('select public.approve_end_tenancy($1)', [tenancyA]);
+    const r = await db.query(
+      'select status, ended_at is not null as closed from public.tenancies where id = $1',
+      [tenancyA],
+    );
+    const p = await db.query('select status from public.properties where id = $1', [propA]);
+    return Object.assign({}, r.rows[0], { property: p.rows[0].status });
+  });
+  check('approving ends it and frees the property', ended, { status: 'ended', closed: true, property: 'vacant' });
+
+  const kept = await asUser(db, tenantA, async () => {
+    const r = await db.query('select count(*)::int as n from public.payments where tenancy_id = $1', [tenancyA]);
+    return r.rows[0].n;
+  });
+  check('payments survive the tenancy ending', kept > 0, true);
+
   console.log(`\n${passed}/${passed + failed} checks passed`);
   process.exit(failed === 0 ? 0 : 1);
 };
+
+
 
 main().catch(err => {
   console.error('\nharness error:', err.message);

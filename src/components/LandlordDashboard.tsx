@@ -67,8 +67,10 @@ import {
   SelectValue,
 } from "./ui/select";
 import { toast } from "sonner";
+import { Repeat } from "lucide-react";
 import { PendingClaims } from "./landlord/PendingClaims";
 import { ReportedPayments } from "./landlord/ReportedPayments";
+import { EndRequests } from "./landlord/EndRequests";
 import type { DbTenancy } from "../lib/tenancy";
 import logoImage from "../assets/5552fb9550c2859aaeadad56af03cd7adcd56e69.png";
 import { toPropertyData } from "../types/property";
@@ -83,6 +85,8 @@ interface LandlordDashboardProps {
   tenancies?: DbTenancy[];
   /** Re-read after confirming a claim or a payment. */
   refreshTenancy?: () => void;
+  /** Absent for guests, who have no account to sign out of. */
+  onSignOut?: () => void;
   onNavigateToPropertyListing: () => void;
   onNavigateToPropertyManagement: (property: PropertyData) => void;
   onUpdateProperty: (
@@ -100,6 +104,7 @@ export function LandlordDashboard({
   pendingClaims = [],
   tenancies = [],
   refreshTenancy = () => {},
+  onSignOut,
   onNavigateToPropertyListing,
   onNavigateToPropertyManagement,
   onUpdateProperty,
@@ -218,16 +223,30 @@ export function LandlordDashboard({
               Aavas
             </span>
           </div>
-          <Button
-            aria-label="Switch role"
-            variant="ghost"
-            onClick={onBack}
-            className="rounded-full gap-2 text-muted-foreground"
-            title="Switch Role"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline text-sm">Switch role</span>
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              aria-label="Switch role"
+              variant="ghost"
+              onClick={onBack}
+              className="rounded-full gap-2 text-muted-foreground"
+              title="Switch Role"
+            >
+              <Repeat className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">Switch role</span>
+            </Button>
+            {onSignOut && (
+              <Button
+                aria-label="Sign out"
+                variant="ghost"
+                onClick={onSignOut}
+                className="rounded-full gap-2 text-muted-foreground"
+                title="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Sign out</span>
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -260,6 +279,11 @@ export function LandlordDashboard({
           onChanged={refreshTenancy}
         />
       )}
+      <EndRequests
+        tenancies={tenancies}
+        properties={properties}
+        onChanged={refreshTenancy}
+      />
       <ReportedPayments tenancies={tenancies} onChanged={refreshTenancy} />
 
       {/* Stats Cards */}

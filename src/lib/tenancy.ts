@@ -50,13 +50,16 @@ export interface DbTenancy {
   proposed_start_date: string | null;
   proposed_end_date: string | null;
   confirmed_at: string | null;
+  end_requested_at: string | null;
+  end_requested_by: string | null;
+  ended_at: string | null;
 }
 
 const PROPERTY_COLUMNS =
   'id, landlord_id, title, address_line, city, state, pincode, type, status, rent, deposit, bedrooms, bathrooms, area_sqft, amenities, image_paths, rating';
 
 const TENANCY_COLUMNS =
-  'id, property_id, landlord_id, tenant_id, claimed_address, claimed_landlord_email, source, status, rent, deposit, start_date, end_date, proposed_rent, proposed_deposit, proposed_start_date, proposed_end_date, confirmed_at';
+  'id, property_id, landlord_id, tenant_id, claimed_address, claimed_landlord_email, source, status, rent, deposit, start_date, end_date, proposed_rent, proposed_deposit, proposed_start_date, proposed_end_date, confirmed_at, end_requested_at, end_requested_by, ended_at';
 
 /** Postgres messages are for developers; these are the ones a person can act on. */
 function friendly(message: string): string {
@@ -316,6 +319,75 @@ export async function withdrawTenancy(tenancyId: string): Promise<void> {
   const client = requireSupabase();
   const { error } = await client.from('tenancies').delete().eq('id', tenancyId);
   if (error) fail(error.message);
+}
+
+/** The tenant asks to end an active tenancy. Nothing ends until approved. */
+export async function requestEndTenancy(tenancyId: string): Promise<void> {
+  const client = requireSupabase();
+  const { error } = await client.rpc('request_end_tenancy', { p_tenancy_id: tenancyId });
+  if (error) fail(error.message);
+}
+
+export async function cancelEndRequest(tenancyId: string): Promise<void> {
+  const client = requireSupabase();
+  const { error } = await client.rpc('cancel_end_request', { p_tenancy_id: tenancyId });
+  if (error) fail(error.message);
+}
+
+/** The landlord agrees, and the tenancy ends. */
+export async function approveEndTenancy(tenancyId: string): Promise<void> {
+  const client = requireSupabase();
+  const { error } = await client.rpc('approve_end_tenancy', { p_tenancy_id: tenancyId });
+  if (error) fail(error.message);
+}
+
+export interface TenancyMember {
+  tenant_id: string;
+  joined_at: string;
+  full_name: string;
+  email: string;
+}
+
+/** Everyone on a tenancy - flatmates included. */
+export async function listMembers(tenancyId: string): Promise<TenancyMember[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('tenancy_members')
+    .select('tenant_id, joined_at')
+    .eq('tenancy_id', tenancyId);
+  if (error) fail(error.message);
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, email')
+    .in('id', rows.map(r => r.tenant_id));
+
+  return rows.map(r => {
+    const p = (profiles ?? []).find(x => x.id === r.tenant_id);
+    return {
+      tenant_id: r.tenant_id,
+      joined_at: r.joined_at,
+      full_name: p?.full_name || p?.email || 'Tenant',
+      email: p?.email || '',
+    };
+  });
+}
+
+/** Unused, unexpired invites for a tenancy - the code to share with a flatmate. */
+export async function listOpenInvites(
+  tenancyId: string,
+): Promise<{ id: string; code: string; expires_at: string }[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('invites')
+    .select('id, code, expires_at, accepted_at')
+    .eq('tenancy_id', tenancyId)
+    .is('accepted_at', null)
+    .order('created_at', { ascending: false });
+  if (error) fail(error.message);
+  return (data ?? []).filter(i => new Date(i.expires_at) > new Date());
 }
 
 export async function rejectTenancyClaim(tenancyId: string): Promise<void> {

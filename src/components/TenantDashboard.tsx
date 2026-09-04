@@ -18,7 +18,8 @@ import type { TenantPropertyView } from '../lib/tenantView';
 import { useTenancy } from '../context/TenancyProvider';
 import { useAppState } from '../context/AppState';
 import { reportPayment } from '../lib/records';
-import { withdrawTenancy } from '../lib/tenancy';
+import { cancelEndRequest, requestEndTenancy, withdrawTenancy } from '../lib/tenancy';
+import { Repeat } from 'lucide-react';
 
 interface TenantDashboardProps {
   userName: string;
@@ -29,6 +30,8 @@ interface TenantDashboardProps {
    * flat instead of an empty screen.
    */
   property: TenantPropertyView;
+  /** Absent for guests, who have no account to sign out of. */
+  onSignOut?: () => void;
   onNavigateToRentDetails: (initialTab?: 'agreement' | 'history') => void;
   onNavigateToUtilityServices: () => void;
   onNavigateToComplaintRegistration: () => void;
@@ -36,7 +39,7 @@ interface TenantDashboardProps {
   onBack: () => void;
 }
 
-export function TenantDashboard({ userName, userEmail, property, onNavigateToRentDetails, onNavigateToUtilityServices, onNavigateToComplaintRegistration, onNavigateToLandlordContact, onBack }: TenantDashboardProps) {
+export function TenantDashboard({ userName, userEmail, property, onSignOut, onNavigateToRentDetails, onNavigateToUtilityServices, onNavigateToComplaintRegistration, onNavigateToLandlordContact, onBack }: TenantDashboardProps) {
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'netbanking' | 'card'>('upi');
@@ -48,8 +51,38 @@ export function TenantDashboard({ userName, userEmail, property, onNavigateToRen
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isRentPaid, setIsRentPaid] = useState(false);
   const { myTenancy, refresh } = useTenancy();
-  const { userId } = useAppState();
+  const { userId, isAuthenticated } = useAppState();
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+
+  const [isLeaving, setIsLeaving] = useState(false);
+  const endRequested = Boolean(myTenancy?.end_requested_at);
+
+  // Asking is all a tenant can do: ending the tenancy is the landlord's to
+  // approve, so nothing changes here until they do.
+  const handleLeave = () => {
+    if (!myTenancy) return;
+    setIsLeaving(true);
+    const action = endRequested ? cancelEndRequest : requestEndTenancy;
+    action(myTenancy.id)
+      .then(() => {
+        refresh();
+        toast.success(
+          endRequested ? 'Request cancelled' : 'Request sent to your landlord',
+          {
+            description: endRequested
+              ? 'Your tenancy carries on as before.'
+              : 'Your tenancy continues until they approve it.',
+          },
+        );
+      })
+      .catch(err =>
+        toast.error('Could not send that', {
+          description: err instanceof Error ? err.message : 'Please try again.',
+        }),
+      )
+      .finally(() => setIsLeaving(false));
+  };
 
   const handleWithdraw = () => {
     if (!myTenancy) return;
@@ -217,16 +250,30 @@ export function TenantDashboard({ userName, userEmail, property, onNavigateToRen
           <img src={logoImage} alt="Aavas" className="h-7" />
           <span className="text-xl font-aavas" style={{ color: 'var(--tenant-primary)' }}>Aavas</span>
         </div>
-        <Button
-          aria-label="Switch role"
-          variant="ghost"
-          onClick={onBack}
-          className="rounded-full gap-2 text-muted-foreground"
-          title="Switch Role"
-        >
-          <LogOut className="w-4 h-4" />
-          <span className="hidden sm:inline text-sm">Switch role</span>
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            aria-label="Switch role"
+            variant="ghost"
+            onClick={onBack}
+            className="rounded-full gap-2 text-muted-foreground"
+            title="Switch Role"
+          >
+            <Repeat className="w-4 h-4" />
+            <span className="hidden sm:inline text-sm">Switch role</span>
+          </Button>
+          {isAuthenticated && onSignOut && (
+            <Button
+              aria-label="Sign out"
+              variant="ghost"
+              onClick={onSignOut}
+              className="rounded-full gap-2 text-muted-foreground"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">Sign out</span>
+            </Button>
+          )}
+        </div>
       </motion.div>
 
       <motion.div
@@ -355,6 +402,36 @@ export function TenantDashboard({ userName, userEmail, property, onNavigateToRen
                   </div>
                 </div>
               </div>
+
+              {/* Ending a tenancy takes both sides, so this asks rather than
+                  does. Only shown once there is a real, confirmed tenancy. */}
+              {myTenancy && !propertyData.isUnconfirmed && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--hairline)] p-4">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {endRequested ? 'You have asked to end this tenancy' : 'Moving out?'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {endRequested
+                        ? 'Waiting for your landlord to approve. Nothing changes until they do.'
+                        : 'Your landlord has to approve before the tenancy ends.'}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-11 sm:h-8 shrink-0"
+                    disabled={isLeaving}
+                    onClick={handleLeave}
+                  >
+                    {isLeaving
+                      ? 'Working…'
+                      : endRequested
+                        ? 'Cancel request'
+                        : 'Request to leave'}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
