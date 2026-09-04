@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form@7.55.0';
+import { useForm, Controller } from 'react-hook-form';
 import { motion } from 'motion/react';
 import { Eye, EyeOff, Lock, Mail, User, UserPlus, ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
@@ -8,8 +8,8 @@ import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription } from './ui/alert';
-import logoImage from 'figma:asset/9916df943b90f5078a96ced9635c98fd96bc1655.png';
-import { toast } from 'sonner@2.0.3';
+import logoImage from '../assets/9916df943b90f5078a96ced9635c98fd96bc1655.png';
+import { toast } from 'sonner';
 
 interface SignUpFormData {
   name: string;

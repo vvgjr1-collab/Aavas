@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Home, Building2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import logoImage from 'figma:asset/9916df943b90f5078a96ced9635c98fd96bc1655.png';
+import logoImage from '../assets/9916df943b90f5078a96ced9635c98fd96bc1655.png';
 
 interface RoleSelectionProps {
   userName: string;

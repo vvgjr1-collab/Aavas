@@ -26,7 +26,7 @@ import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface LandlordContactProps {
   userName: string;

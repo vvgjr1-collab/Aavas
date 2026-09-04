@@ -9,10 +9,10 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { RentDetails } from './RentDetails';
-import logoImage from 'figma:asset/f9db841723abccd8e77067ba08099110a512d8fa.png';
+import logoImage from '../assets/f9db841723abccd8e77067ba08099110a512d8fa.png';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 interface TenantDashboardProps {

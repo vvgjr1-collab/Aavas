@@ -66,8 +66,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { toast } from "sonner@2.0.3";
-import logoImage from "figma:asset/5552fb9550c2859aaeadad56af03cd7adcd56e69.png";
+import { toast } from "sonner";
+import logoImage from "../assets/5552fb9550c2859aaeadad56af03cd7adcd56e69.png";
 import { toPropertyData } from "../types/property";
 import type { Property, PropertyData } from "../types/property";
 

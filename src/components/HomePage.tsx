@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
-import logoImage from "figma:asset/a50520d040d7cd75938aa9ef0a9e11b29117b932.png";
+import logoImage from "../assets/a50520d040d7cd75938aa9ef0a9e11b29117b932.png";
 
 interface HomePageProps {
   onGetStarted: () => void;
