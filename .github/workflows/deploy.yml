@@ -30,6 +30,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Fails the deploy on a type error. Vite transpiles without checking
+      # types, so without this step a type regression would ship silently.
+      - name: Type check
+        run: npm run typecheck
+
       - name: Build
         run: npm run build
 
