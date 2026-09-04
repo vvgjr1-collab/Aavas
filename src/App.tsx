@@ -3,6 +3,7 @@ import { MotionConfig } from 'motion/react';
 import { AppStateProvider } from './context/AppState';
 import { AppRoutes } from './routes/AppRoutes';
 import { Toaster } from './components/ui/sonner';
+import { NativeShell } from './native/NativeShell';
 
 /**
  * Hash routing keeps the app deployable at any path (GitHub Pages project
@@ -22,6 +23,9 @@ export default function App() {
     >
       <HashRouter>
         <AppStateProvider>
+          {/* Android hardware back button and status-bar tinting. Inert on the
+              web, where the same bundle is served by GitHub Pages. */}
+          <NativeShell />
           <AppRoutes />
           <Toaster position="top-center" expand richColors />
         </AppStateProvider>

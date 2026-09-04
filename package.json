@@ -3,6 +3,10 @@
       "version": "0.1.0",
       "private": true,
       "dependencies": {
+            "@capacitor/android": "^8.5.1",
+            "@capacitor/app": "^8.1.1",
+            "@capacitor/core": "^8.5.1",
+            "@capacitor/status-bar": "^8.0.3",
             "@radix-ui/react-accordion": "^1.2.3",
             "@radix-ui/react-alert-dialog": "^1.1.6",
             "@radix-ui/react-aspect-ratio": "^1.1.2",
@@ -51,6 +55,7 @@
             "vaul": "^1.1.2"
       },
       "devDependencies": {
+            "@capacitor/cli": "^8.5.1",
             "@tailwindcss/vite": "^4.3.3",
             "@types/node": "^20.10.0",
             "@types/react": "^18.3.31",
@@ -64,6 +69,9 @@
       "scripts": {
             "dev": "vite",
             "build": "vite build",
-            "typecheck": "tsc"
+            "typecheck": "tsc",
+            "android:init": "cap add android && npm run android:sync",
+            "android:sync": "npm run build && cap sync android",
+            "android:open": "cap open android"
       }
 }

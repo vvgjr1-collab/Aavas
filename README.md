@@ -8,4 +8,9 @@
   Run `npm i` to install the dependencies.
 
   Run `npm run dev` to start the development server.
+
+  ## Android app
+
+  The same build is wrapped by Capacitor and shipped as a native Android app.
+  See [docs/android.md](docs/android.md) for prerequisites and the workflow.
   
