@@ -96,7 +96,7 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
       onNavigateToComplaintRegistration();
     } else {
       // In a real app, other actions would navigate to their specific pages
-      alert(`Opening ${actionButtons.find(btn => btn.id === actionId)?.title} (This is a demo)`);
+      toast.info(`Opening ${actionButtons.find(btn => btn.id === actionId)?.title} (This is a demo)`);
     }
   };
 

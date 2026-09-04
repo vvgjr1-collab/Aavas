@@ -26,6 +26,7 @@ import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { toast } from 'sonner@2.0.3';
 
 interface LandlordContactProps {
   userName: string;
@@ -567,7 +568,7 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                   style={{ borderColor: '#fb923c' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(251, 146, 60, 0.1)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onClick={() => alert('Calling emergency line (This is a demo)')}
+                  onClick={() => toast.info('Calling emergency line (This is a demo)')}
                 >
                   <Phone className="w-4 h-4 mr-2" />
                   Emergency Line

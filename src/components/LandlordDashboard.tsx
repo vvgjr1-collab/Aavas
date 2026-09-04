@@ -482,7 +482,7 @@ export function LandlordDashboard({
                               size="sm"
                               className="text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30"
                               onClick={() =>
-                                alert(
+                                toast.info(
                                   `Calling ${property.tenant?.name} (This is a demo)`
                                 )
                               }
@@ -494,7 +494,7 @@ export function LandlordDashboard({
                               size="sm"
                               className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                               onClick={() =>
-                                alert(
+                                toast.info(
                                   `Emailing ${property.tenant?.name} (This is a demo)`
                                 )
                               }
@@ -544,7 +544,7 @@ export function LandlordDashboard({
                           size="sm"
                           className="flex-1 bg-[#ff914d] hover:bg-[#e57a38] text-white"
                           onClick={() =>
-                            alert(
+                            toast.info(
                               `Promoting ${property.title} (This is a demo)`
                             )
                           }

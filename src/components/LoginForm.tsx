@@ -10,6 +10,7 @@ import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription } from './ui/alert';
 import logoImage from 'figma:asset/9916df943b90f5078a96ced9635c98fd96bc1655.png';
 import { ArrowLeft } from 'lucide-react';
+import { toast } from 'sonner@2.0.3';
 
 interface LoginFormData {
   email: string;
@@ -227,7 +228,7 @@ export function LoginForm({ onSwitchToSignup, onAuthSuccess, onBack, onGuestLogi
               <button
                 type="button"
                 className="text-sm text-primary hover:underline transition-all duration-200"
-                onClick={() => alert('Forgot password feature coming soon!')}
+                onClick={() => toast.info('Forgot password feature coming soon!')}
               >
                 Forgot password?
               </button>

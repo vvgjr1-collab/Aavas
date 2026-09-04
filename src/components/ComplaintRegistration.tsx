@@ -24,6 +24,7 @@ import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { toast } from 'sonner@2.0.3';
 
 interface ComplaintRegistrationProps {
   userName: string;
@@ -448,7 +449,7 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
                 <Button
                   variant="destructive"
                   className="w-full"
-                  onClick={() => alert('Calling emergency contact (This is a demo)')}
+                  onClick={() => toast.info('Calling emergency contact (This is a demo)')}
                 >
                   <Phone className="w-4 h-4 mr-2" />
                   Call Emergency Line

@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription } from './ui/alert';
 import logoImage from 'figma:asset/9916df943b90f5078a96ced9635c98fd96bc1655.png';
+import { toast } from 'sonner@2.0.3';
 
 interface SignUpFormData {
   name: string;
@@ -318,7 +319,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                   <button
                     type="button"
                     className="text-primary hover:underline"
-                    onClick={() => alert('Terms and conditions coming soon!')}
+                    onClick={() => toast.info('Terms and conditions coming soon!')}
                   >
                     Terms and Conditions
                   </button>{' '}
@@ -326,7 +327,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                   <button
                     type="button"
                     className="text-primary hover:underline"
-                    onClick={() => alert('Privacy policy coming soon!')}
+                    onClick={() => toast.info('Privacy policy coming soon!')}
                   >
                     Privacy Policy
                   </button>
