@@ -12,7 +12,6 @@ import {
   Clock,
   Building
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -90,7 +89,8 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
     }
   ];
 
-  const handleViewPDF = () => {
+  const handleViewPDF = async () => {
+    const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     
     // Set up document properties
@@ -292,7 +292,8 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
     window.open(pdfUrl, '_blank');
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
+    const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     
     // Set up document properties
