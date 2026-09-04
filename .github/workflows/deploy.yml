@@ -35,6 +35,13 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      # The anon key is public on a static host, so the RLS policies are the
+      # whole security model. These run against real Postgres (PGlite) in a few
+      # seconds and take no external service, so a policy regression fails the
+      # build rather than shipping.
+      - name: Database policy tests
+        run: npm run db:test
+
       - name: Build
         run: npm run build
 

@@ -13,4 +13,10 @@
 
   The same build is wrapped by Capacitor and shipped as a native Android app.
   See [docs/android.md](docs/android.md) for prerequisites and the workflow.
+
+  ## Database
+
+  Postgres on Supabase. The anon key is public on a static host, so Row Level
+  Security is the whole security model - run `npm run db:test` before changing a
+  policy. See [docs/database.md](docs/database.md).
   
