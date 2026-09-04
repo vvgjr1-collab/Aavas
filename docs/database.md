@@ -122,16 +122,44 @@ visibility, the payment reporting/confirmation split, and storage path parsing.
 
 ## Applying it
 
-Nothing here has been run against a live Supabase project yet; there isn't one.
-Once there is:
+Paste the three files in `supabase/migrations/` into the dashboard SQL editor,
+**in filename order** - the policies reference tables the first file creates:
+
+1. `20260904120000_schema.sql`
+2. `20260904120100_policies.sql`
+3. `20260904120200_storage.sql`
+
+(`npx supabase db push` does the same thing, but needs a personal access token
+and the database password.)
+
+Then check two settings in the dashboard: **email confirmations on**, and the
+`documents` bucket **not public** - the migration creates it private, and
+`db:verify` checks it stayed that way.
+
+## Verifying a live project
 
 ```bash
-npx supabase link --project-ref <ref>
-npx supabase db push
+cp .env.example .env      # fill in from Project Settings -> API
+npm run db:verify
 ```
 
-Or paste the three files in `supabase/migrations/` into the SQL editor in order.
+This uses the anon key only - the same public credential the browser gets - so
+it checks exactly what an anonymous stranger can reach. Every table must refuse
+it, which means a PASS reads as "correctly denied".
 
-Two settings to check in the dashboard afterwards: **email confirmations on**,
-and the `documents` bucket **not public** (the migration creates it private;
-worth confirming it stayed that way).
+It answers the things only a live project can: that the migrations actually
+applied, that RLS is switched on, that no grant leaked to `anon`, and that the
+documents bucket is private. The policy logic itself is covered by
+`npm run db:test` against real Postgres.
+
+## Configuration
+
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, from `.env` locally and from
+GitHub Actions **repository variables** in CI. Variables rather than secrets on
+purpose: Vite inlines every `VITE_` value into the bundle, so both are public
+the moment the site ships. That is fine - the anon key grants nothing on its
+own. The **service_role key bypasses RLS entirely** and must never appear in a
+`VITE_` variable, in `.env`, or in the repository.
+
+With neither set, the build still succeeds and the app runs in demo mode, so
+guest login keeps working with no backend at all.

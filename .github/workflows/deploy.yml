@@ -44,6 +44,17 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Repository *variables*, not secrets: Vite inlines every VITE_ value
+          # into the bundle, so these are public the moment the site ships. The
+          # anon key grants nothing on its own - Row Level Security is what
+          # protects the data. The service_role key must never appear here.
+          #
+          # If these are unset the build still succeeds and the app runs in
+          # demo mode (see src/lib/supabase.ts), so nothing breaks before they
+          # are configured.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
