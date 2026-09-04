@@ -1,10 +1,11 @@
 
   import { defineConfig } from 'vite';
   import react from '@vitejs/plugin-react-swc';
+  import tailwindcss from '@tailwindcss/vite';
   import path from 'path';
 
   export default defineConfig({
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
     // Relative asset URLs, so the build works from any path: the GitHub Pages
     // project subpath (/Aavas/), a domain root, or a local preview. Safe because
     // the app has no client-side router - navigation is React state.
