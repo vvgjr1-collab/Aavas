@@ -68,7 +68,6 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
       });
       
       // Success - pass user data to parent
-      console.log('Sign up successful:', data);
       onAuthSuccess({ name: data.name, email: data.email });
     } catch (error) {
       setSignupError('Email already exists. Please try a different email or sign in.');

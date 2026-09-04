@@ -178,7 +178,6 @@ export function AuthContainer({ onRoleChange, initialView = 'signup', onBackToHo
   };
 
   const handleRoleSelect = (role: 'tenant' | 'landlord') => {
-    console.log('Selected role:', role, 'for user:', userData);
     setUserRole(role);
     onRoleChange?.(role);
     if (role === 'tenant') {

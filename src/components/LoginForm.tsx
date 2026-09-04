@@ -64,7 +64,6 @@ export function LoginForm({ onSwitchToSignup, onAuthSuccess, onBack, onGuestLogi
       
       // Success - extract name from email for demo purposes
       const name = data.email.split('@')[0];
-      console.log('Login successful:', data);
       onAuthSuccess({ name, email: data.email });
     } catch (error) {
       setLoginError('Invalid email or password. Please try again.');
