@@ -11,6 +11,7 @@ import { LandlordContact } from './LandlordContact';
 import { LandlordDashboard } from './LandlordDashboard';
 import { PropertyListing } from './PropertyListing';
 import { PropertyManagement } from './PropertyManagement';
+import type { Property, PropertyData } from '../types/property';
 
 type AuthView = 'login' | 'signup' | 'roleSelection' | 'tenantDashboard' | 'landlordDashboard' | 'rentDetails' | 'utilityServices' | 'serviceBooking' | 'complaintRegistration' | 'landlordContact' | 'propertyListing' | 'propertyManagement';
 
@@ -30,43 +31,6 @@ interface ServiceProvider {
 interface UserData {
   name: string;
   email: string;
-}
-
-interface PropertyData {
-  id: string;
-  title: string;
-  address: string;
-  rent: string;
-  tenant?: {
-    name: string;
-    phone: string;
-    email: string;
-    moveInDate: string;
-  };
-}
-
-interface Property {
-  id: string;
-  title: string;
-  address: string;
-  type: 'apartment' | 'house' | 'villa' | 'studio' | 'penthouse';
-  rent: number;
-  deposit: number;
-  bedrooms: number;
-  bathrooms: number;
-  area: number;
-  status: 'occupied' | 'vacant' | 'maintenance';
-  tenant?: {
-    name: string;
-    email: string;
-    phone: string;
-    leaseStart: string;
-    leaseEnd: string;
-  };
-  amenities: string[];
-  images: string[];
-  rating: number;
-  lastUpdated: string;
 }
 
 interface AuthContainerProps {

@@ -35,19 +35,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
-
-interface PropertyData {
-  id: string;
-  title: string;
-  address: string;
-  rent: string;
-  tenant?: {
-    name: string;
-    phone: string;
-    email: string;
-    moveInDate: string;
-  };
-}
+import type { PropertyData } from '../types/property';
 
 interface PropertyManagementProps {
   property: PropertyData;

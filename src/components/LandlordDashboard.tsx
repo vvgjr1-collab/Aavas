@@ -68,6 +68,8 @@ import {
 } from "./ui/select";
 import { toast } from "sonner@2.0.3";
 import logoImage from "figma:asset/5552fb9550c2859aaeadad56af03cd7adcd56e69.png";
+import { toPropertyData } from "../types/property";
+import type { Property, PropertyData } from "../types/property";
 
 interface LandlordDashboardProps {
   userName: string;
@@ -81,43 +83,6 @@ interface LandlordDashboardProps {
   ) => void;
   onDeleteProperty: (propertyId: string) => void;
   onBack: () => void;
-}
-
-interface PropertyData {
-  id: string;
-  title: string;
-  address: string;
-  rent: string;
-  tenant?: {
-    name: string;
-    phone: string;
-    email: string;
-    moveInDate: string;
-  };
-}
-
-interface Property {
-  id: string;
-  title: string;
-  address: string;
-  type: "apartment" | "house" | "villa" | "studio";
-  rent: number;
-  deposit: number;
-  bedrooms: number;
-  bathrooms: number;
-  area: number;
-  status: "occupied" | "vacant" | "maintenance";
-  tenant?: {
-    name: string;
-    email: string;
-    phone: string;
-    leaseStart: string;
-    leaseEnd: string;
-  };
-  amenities: string[];
-  images: string[];
-  rating: number;
-  lastUpdated: string;
 }
 
 export function LandlordDashboard({
@@ -569,7 +534,7 @@ export function LandlordDashboard({
                         variant="outline"
                         size="sm"
                         className="flex-1 border-[#2e3a8c]/30 dark:border-[#2e3a8c] text-[#2e3a8c] hover:bg-[#f4eedf] dark:hover:bg-[#2e3a8c]/30"
-                        onClick={() => onNavigateToPropertyManagement(property)}
+                        onClick={() => onNavigateToPropertyManagement(toPropertyData(property))}
                       >
                         <Settings className="w-4 h-4 mr-2" />
                         Manage
