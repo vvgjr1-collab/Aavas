@@ -754,8 +754,46 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
 
                 <Separator className="mb-6" style={{ backgroundColor: 'var(--tenant-primary)', opacity: 0.3 }} />
 
-                {/* Payment History Table */}
-                <div className="rounded-lg border" style={{ borderColor: 'var(--tenant-primary)' }}>
+                {/* Payment history. A six-column table is 656px wide - it only
+                    ever scrolled sideways inside its own container on a phone,
+                    so below md the same rows are stacked as cards instead. */}
+                <ul className="space-y-3 md:hidden">
+                  {paymentHistory.map((payment) => (
+                    <li
+                      key={payment.id}
+                      className="rounded-2xl border p-4 shadow-[var(--shadow-xs)]"
+                      style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-lg font-semibold tracking-[-0.02em]" style={{ color: 'var(--tenant-primary)' }}>
+                            {payment.amount}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{payment.type}</p>
+                        </div>
+                        <Badge style={{ backgroundColor: 'rgba(122, 216, 158, 0.2)', color: 'var(--tenant-success-dark)' }}>
+                          {payment.status}
+                        </Badge>
+                      </div>
+                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Date paid</dt>
+                          <dd>{payment.date}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Due date</dt>
+                          <dd className="text-muted-foreground">{payment.dueDate}</dd>
+                        </div>
+                        <div className="col-span-2">
+                          <dt className="text-xs text-muted-foreground">Method</dt>
+                          <dd>{payment.method}</dd>
+                        </div>
+                      </dl>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="hidden rounded-lg border md:block" style={{ borderColor: 'var(--tenant-primary)' }}>
                   <Table>
                     <TableHeader>
                       <TableRow style={{ backgroundColor: 'var(--tenant-accent)' }}>

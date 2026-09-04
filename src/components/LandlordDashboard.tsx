@@ -244,19 +244,19 @@ export function LandlordDashboard({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}
-        className="grid grid-cols-1 md:grid-cols-4 gap-4"
+        className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4"
       >
         <Card className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/30 dark:border-[#2e3a8c]">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-[#2e3a8c] rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-[#2e3a8c] rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
                 <Building2 className="w-6 h-6 text-white" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
                   Total Properties
                 </p>
-                <p className="text-3xl font-semibold tracking-[-0.03em] text-[#2e3a8c] dark:text-[#4a5bb0]">
+                <p className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-[#2e3a8c] dark:text-[#4a5bb0]">
                   {stats.totalProperties}
                 </p>
               </div>
@@ -265,14 +265,14 @@ export function LandlordDashboard({
         </Card>
 
         <Card className="shadow-[var(--shadow-md)] border border-green-200 dark:border-green-800">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-green-500 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
                 <Users className="w-6 h-6 text-white" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Occupied</p>
-                <p className="text-3xl font-semibold tracking-[-0.03em] text-green-700 dark:text-green-300">
+                <p className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-green-700 dark:text-green-300">
                   {stats.occupiedProperties}
                 </p>
               </div>
@@ -281,14 +281,14 @@ export function LandlordDashboard({
         </Card>
 
         <Card className="shadow-[var(--shadow-md)] border border-blue-200 dark:border-blue-800">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-blue-500 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
                 <Home className="w-6 h-6 text-white" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Vacant</p>
-                <p className="text-3xl font-semibold tracking-[-0.03em] text-blue-700 dark:text-blue-300">
+                <p className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-blue-700 dark:text-blue-300">
                   {stats.vacantProperties}
                 </p>
               </div>
@@ -297,14 +297,14 @@ export function LandlordDashboard({
         </Card>
 
         <Card className="shadow-[var(--shadow-md)] border border-purple-200 dark:border-purple-800">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-purple-500 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-purple-500 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)]">
                 <TrendingUp className="w-6 h-6 text-white" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Monthly Revenue</p>
-                <p className="text-3xl font-semibold tracking-[-0.03em] text-purple-700 dark:text-purple-300">
+                <p className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-purple-700 dark:text-purple-300">
                   ₹{stats.monthlyRevenue.toLocaleString()}
                 </p>
               </div>
@@ -320,7 +320,7 @@ export function LandlordDashboard({
         transition={{ delay: 0.3, duration: 0.5 }}
         className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0"
       >
-        <div className="flex flex-wrap gap-2">
+        <div className="-mx-1 flex w-full gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0">
           {[
             { key: "all", label: "All Properties", count: properties.length },
             {
@@ -339,7 +339,7 @@ export function LandlordDashboard({
             <Button
               key={filter.key}
               variant={filterStatus === filter.key ? "default" : "ghost"}
-              className={`${
+              className={`shrink-0 rounded-full ${
                 filterStatus === filter.key
                   ? "bg-[#2e3a8c] hover:bg-[#1f2861] text-white"
                   : "hover:bg-[#f4eedf] dark:hover:bg-[#2e3a8c]/30 text-[#2e3a8c] dark:text-[#4a5bb0]"
@@ -385,8 +385,8 @@ export function LandlordDashboard({
                     <Button
                       aria-label={`View ${property.title}`}
                       variant="ghost"
-                      size="sm"
-                      className="bg-white/90 hover:bg-white text-[#2e3a8c]"
+                      size="icon"
+                      className="size-11 sm:size-9 bg-white/90 hover:bg-white text-[#2e3a8c] shadow-[var(--shadow-xs)]"
                       onClick={() =>
                         onNavigateToPropertyManagement(toPropertyData(property))
                       }
@@ -396,8 +396,8 @@ export function LandlordDashboard({
                     <Button
                       aria-label={`Edit ${property.title}`}
                       variant="ghost"
-                      size="sm"
-                      className="bg-white/90 hover:bg-white text-[#2e3a8c]"
+                      size="icon"
+                      className="size-11 sm:size-9 bg-white/90 hover:bg-white text-[#2e3a8c] shadow-[var(--shadow-xs)]"
                       onClick={() => handleEditClick(property)}
                     >
                       <Edit className="w-4 h-4" />
@@ -405,8 +405,8 @@ export function LandlordDashboard({
                     <Button
                       aria-label={`Delete ${property.title}`}
                       variant="ghost"
-                      size="sm"
-                      className="bg-white/90 hover:bg-white text-destructive hover:text-destructive"
+                      size="icon"
+                      className="size-11 sm:size-9 bg-white/90 hover:bg-white text-destructive hover:text-destructive shadow-[var(--shadow-xs)]"
                       onClick={() => handleDeleteClick(property.id)}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -492,8 +492,8 @@ export function LandlordDashboard({
                             <Button
                               aria-label={`Call ${property.tenant?.name}`}
                               variant="ghost"
-                              size="sm"
-                              className="text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30"
+                              size="icon"
+                              className="size-11 sm:size-8 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30"
                               onClick={() =>
                                 toast.info(
                                   `Calling ${property.tenant?.name} (This is a demo)`
@@ -505,8 +505,8 @@ export function LandlordDashboard({
                             <Button
                               aria-label={`Email ${property.tenant?.name}`}
                               variant="ghost"
-                              size="sm"
-                              className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                              size="icon"
+                              className="size-11 sm:size-8 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                               onClick={() =>
                                 toast.info(
                                   `Emailing ${property.tenant?.name} (This is a demo)`
@@ -547,7 +547,7 @@ export function LandlordDashboard({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 border-[#2e3a8c]/30 dark:border-[#2e3a8c] text-[#2e3a8c] hover:bg-[#f4eedf] dark:hover:bg-[#2e3a8c]/30"
+                        className="h-11 sm:h-8 flex-1 border-[#2e3a8c]/30 dark:border-[#2e3a8c] text-[#2e3a8c] hover:bg-[#f4eedf] dark:hover:bg-[#2e3a8c]/30"
                         onClick={() => onNavigateToPropertyManagement(toPropertyData(property))}
                       >
                         <Settings className="w-4 h-4 mr-2" />
@@ -556,7 +556,7 @@ export function LandlordDashboard({
                       {property.status === "vacant" && (
                         <Button
                           size="sm"
-                          className="flex-1 bg-[#ff914d] hover:bg-[#e57a38] text-white"
+                          className="h-11 sm:h-8 flex-1 bg-[#ff914d] hover:bg-[#e57a38] text-white"
                           onClick={() =>
                             toast.info(
                               `Promoting ${property.title} (This is a demo)`

@@ -29,6 +29,7 @@ import { useAppState, useDisplayUser } from '../context/AppState';
 import type { UserData } from '../context/AppState';
 import { TENANT_PROPERTY_ADDRESS } from '../data/properties';
 import { toPropertyData } from '../types/property';
+import { MobileTabBar, tabsForPath } from '../components/MobileTabBar';
 
 /**
  * Route wrappers. Each one adapts the router to a feature component's existing
@@ -74,14 +75,24 @@ function AmbientBackdrop({ role }: { role: 'tenant' | 'landlord' | null }) {
 /** Shared chrome for every screen except the landing page. */
 function AppLayout() {
   const { role } = useAppState();
+  const { pathname } = useLocation();
+  // The tab bar is fixed, so the content column has to reserve its height or
+  // the last card sits underneath it.
+  const hasTabBar = tabsForPath(pathname) !== null;
+
   return (
     <div className={backgroundClass(role)}>
       <AmbientBackdrop role={role} />
-      <div className="relative z-10 w-full max-w-6xl mx-auto">
+      <div
+        className={`relative z-10 w-full max-w-6xl mx-auto ${
+          hasTabBar ? 'pb-24 md:pb-0' : ''
+        }`}
+      >
         <PageTransition>
           <Outlet />
         </PageTransition>
       </div>
+      <MobileTabBar />
     </div>
   );
 }

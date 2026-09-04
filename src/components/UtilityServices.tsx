@@ -132,6 +132,7 @@ export function UtilityServices({ userName, onBack, onBookService }: UtilityServ
           <Button
             variant="ghost"
             size="sm"
+            className="h-11 sm:h-8"
             onClick={onBack}
             style={{ backgroundColor: 'transparent' }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(44, 122, 123, 0.1)'}

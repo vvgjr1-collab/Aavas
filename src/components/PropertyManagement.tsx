@@ -294,7 +294,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="border-[#2e3a8c]/30 text-[#2e3a8c] hover:bg-[#f4eedf]"
+                    className="h-11 sm:h-8 border-[#2e3a8c]/30 text-[#2e3a8c] hover:bg-[#f4eedf]"
                     onClick={handleEditTenant}
                   >
                     <Edit className="w-4 h-4 mr-2" />

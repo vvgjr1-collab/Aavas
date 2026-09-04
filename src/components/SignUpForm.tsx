@@ -91,7 +91,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
           onClick={onBack}
-          className="absolute -top-16 left-0 flex items-center gap-2 text-[#2e3a8c] hover:text-[#2e3a8c]/80 transition-colors duration-200 group"
+          className="absolute -top-16 left-0 -m-2 flex min-h-11 items-center gap-2 rounded-xl p-2 text-[#2e3a8c] hover:text-[#2e3a8c]/80 transition-colors duration-200 group"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
           <span>Back to Home</span>
@@ -227,7 +227,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                       id="password"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Create a password"
-                      className={`pl-10 pr-10 transition-all duration-200 ${
+                      className={`pl-10 pr-11 transition-all duration-200 ${
                         errors.password ? 'border-destructive focus:border-destructive' : ''
                       } ${watchedFields.password ? 'border-primary' : ''}`}
                     />
@@ -237,7 +237,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-0 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-xl text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -270,7 +270,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                       id="confirmPassword"
                       type={showConfirmPassword ? 'text' : 'password'}
                       placeholder="Confirm your password"
-                      className={`pl-10 pr-10 transition-all duration-200 ${
+                      className={`pl-10 pr-11 transition-all duration-200 ${
                         errors.confirmPassword ? 'border-destructive focus:border-destructive' : ''
                       } ${watchedFields.confirmPassword ? 'border-primary' : ''}`}
                     />
@@ -280,7 +280,7 @@ export function SignUpForm({ onSwitchToLogin, onAuthSuccess, onBack, onGuestLogi
                   aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-0 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-xl text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>

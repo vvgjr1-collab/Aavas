@@ -427,7 +427,7 @@ export function HomePage({ onGetStarted, onSignIn }: HomePageProps) {
             {["Privacy", "Terms", "Contact"].map((item) => (
               <button
                 key={item}
-                className="transition-colors duration-200 hover:text-white"
+                className="-mx-2 rounded-lg px-2 py-3 transition-colors duration-200 hover:text-white"
               >
                 {item}
               </button>
