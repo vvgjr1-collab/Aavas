@@ -39,7 +39,7 @@ export interface OnboardingState {
  * a demo user into a form that cannot save.
  */
 export function useOnboarding(): OnboardingState {
-  const { isAuthenticated, isGuest } = useAppState();
+  const { isAuthenticated, isGuest, userId } = useAppState();
   const [properties, setProperties] = useState<DbProperty[]>([]);
   const [tenancies, setTenancies] = useState<DbTenancy[]>([]);
   const [loading, setLoading] = useState(false);
@@ -84,7 +84,11 @@ export function useOnboarding(): OnboardingState {
     };
   }, [isAuthenticated, nonce]);
 
-  const myTenancy = tenancies.find(t => t.tenant_id && isLiveTenancy(t)) ?? null;
+  // The tenancy where *I* am the tenant. Matching any row with a tenant
+  // attached would also match the landlord's own tenancies, and show a
+  // landlord the tenant dashboard for a property they own.
+  const myTenancy =
+    tenancies.find(t => t.tenant_id === userId && isLiveTenancy(t)) ?? null;
   const demo = isGuest || !isSupabaseConfigured || !isAuthenticated;
   // A failed read is not evidence that nothing is set up, so it must never
   // route anyone into onboarding they may not need.

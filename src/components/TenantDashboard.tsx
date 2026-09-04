@@ -14,10 +14,17 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { RentDetails } from './RentDetails';
 import logoImage from '../assets/f9db841723abccd8e77067ba08099110a512d8fa.png';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import type { TenantPropertyView } from '../lib/tenantView';
 
 interface TenantDashboardProps {
   userName: string;
   userEmail: string;
+  /**
+   * The tenancy this screen describes. Passed in rather than fetched here so
+   * the component stays presentational, and so guest mode can hand it the demo
+   * flat instead of an empty screen.
+   */
+  property: TenantPropertyView;
   onNavigateToRentDetails: (initialTab?: 'agreement' | 'history') => void;
   onNavigateToUtilityServices: () => void;
   onNavigateToComplaintRegistration: () => void;
@@ -25,7 +32,7 @@ interface TenantDashboardProps {
   onBack: () => void;
 }
 
-export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, onNavigateToUtilityServices, onNavigateToComplaintRegistration, onNavigateToLandlordContact, onBack }: TenantDashboardProps) {
+export function TenantDashboard({ userName, userEmail, property, onNavigateToRentDetails, onNavigateToUtilityServices, onNavigateToComplaintRegistration, onNavigateToLandlordContact, onBack }: TenantDashboardProps) {
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'netbanking' | 'card'>('upi');
@@ -37,24 +44,7 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isRentPaid, setIsRentPaid] = useState(false);
 
-  // Mock property data
-  const propertyData = {
-    address: "123 Sunset Boulevard, Apt 4B",
-    city: "Mumbai, MH 400001",
-    owner: {
-      name: "Sarah Johnson",
-      phone: "+91 98765 43210",
-      email: "sarah.johnson@properties.com"
-    },
-    lease: {
-      startDate: "Jan 15, 2024",
-      endDate: "Jan 14, 2025",
-      monthlyRent: "₹45,000",
-      deposit: "₹90,000"
-    },
-    nextRentDue: "Dec 1, 2024",
-    propertyType: "2BR/2BA Apartment"
-  };
+  const propertyData = property;
 
   const actionButtons = [
     {
@@ -210,9 +200,19 @@ export function TenantDashboard({ userName, userEmail, onNavigateToRentDetails, 
                 <div className="pl-6">
                   <p>{propertyData.address}</p>
                   <p className="text-muted-foreground">{propertyData.city}</p>
-                  <Badge variant="secondary" className="mt-2" style={{ backgroundColor: 'var(--tenant-accent)', color: 'var(--tenant-primary)' }}>
-                    {propertyData.propertyType}
-                  </Badge>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" style={{ backgroundColor: 'var(--tenant-accent)', color: 'var(--tenant-primary)' }}>
+                      {propertyData.propertyType}
+                    </Badge>
+                    {propertyData.isUnconfirmed && (
+                      <Badge
+                        variant="secondary"
+                        style={{ backgroundColor: 'rgba(255, 165, 0, 0.18)', color: '#b45309' }}
+                      >
+                        Awaiting landlord confirmation
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -32,6 +32,7 @@ import { MobileTabBar, tabsForPath } from '../components/MobileTabBar';
 import { TenantSetup } from '../components/onboarding/TenantSetup';
 import { LandlordSetup } from '../components/onboarding/LandlordSetup';
 import { useOnboarding } from '../hooks/useOnboarding';
+import { useTenantView } from '../hooks/useTenantView';
 
 
 /**
@@ -288,10 +289,16 @@ function TenantDashboardRoute() {
   const navigate = useNavigate();
   const { userName, userEmail } = useDisplayUser();
   const onBack = useBackToRoleSelection();
+  const { view, ready } = useTenantView();
+
+  // Hold rather than paint the demo flat and swap it a moment later.
+  if (!ready) return null;
+
   return (
     <TenantDashboard
       userName={userName}
       userEmail={userEmail}
+      property={view}
       onNavigateToRentDetails={(tab = 'agreement') => navigate(`/tenant/rent?tab=${tab}`)}
       onNavigateToUtilityServices={() => navigate('/tenant/utilities')}
       onNavigateToComplaintRegistration={() => navigate('/tenant/complaint')}
