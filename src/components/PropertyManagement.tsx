@@ -32,6 +32,7 @@ import { Separator } from './ui/separator';
 import { Progress } from './ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { TenancyAccess } from './landlord/TenancyAccess';
+import { TenantActivity } from './landlord/TenantActivity';
 import { useTenancy } from '../context/TenancyProvider';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
@@ -256,6 +257,8 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
       </motion.div>
 
       <TenancyAccess propertyId={property.id} tenancy={tenancy} />
+
+      <TenantActivity tenancy={tenancy} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 bg-[#f4eedf] dark:bg-[#2e3a8c]/20">

@@ -134,6 +134,41 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
   return (data as Profile) ?? null;
 }
 
+/**
+ * Read the caller's profile, creating it if it is missing.
+ *
+ * A profile is normally made by a trigger on auth.users, which only fires at
+ * signup. So an account whose profile row disappears - deleted by hand, or
+ * created before the trigger existed - is permanently broken: properties and
+ * tenancies both reference profiles, and every write fails with
+ * "violates foreign key constraint properties_landlord_id_fkey", which tells
+ * the person nothing. Recreating it on sign-in costs one query and turns that
+ * dead end into something that simply works.
+ */
+export async function ensureProfile(user: User): Promise<Profile | null> {
+  if (!supabase) return null;
+
+  const existing = await fetchProfile(user.id);
+  if (existing) return existing;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .insert({
+      id: user.id,
+      email: user.email ?? '',
+      full_name: (user.user_metadata?.full_name as string | undefined) ?? '',
+    })
+    .select('id, full_name, email, phone, active_role, onboarding')
+    .single();
+
+  if (error) {
+    // A race with the trigger, or another tab, is fine - read back what won.
+    console.warn('[aavas] could not create the missing profile:', error.message);
+    return fetchProfile(user.id);
+  }
+  return data as Profile;
+}
+
 export async function updateProfile(
   userId: string,
   changes: Partial<Pick<Profile, 'full_name' | 'phone' | 'active_role' | 'onboarding'>>,

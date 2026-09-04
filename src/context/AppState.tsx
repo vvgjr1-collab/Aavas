@@ -16,7 +16,7 @@ import { initialProperties } from '../data/properties';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
   displayNameFor,
-  fetchProfile,
+  ensureProfile,
   signInWithEmail,
   signOutEverywhere,
   signUpWithEmail,
@@ -114,15 +114,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Load the profile whenever the signed-in user changes.
+  // Load the profile whenever the signed-in user changes, creating it if it
+  // has gone missing - see ensureProfile.
   useEffect(() => {
-    const userId = session?.user?.id;
-    if (!userId) {
+    const user = session?.user;
+    if (!user) {
       setProfile(null);
       return;
     }
     let active = true;
-    fetchProfile(userId).then(next => {
+    ensureProfile(user).then(next => {
       if (active) setProfile(next);
     });
     return () => {

@@ -268,6 +268,7 @@ function RequireSetup({
 
 function TenantSetupRoute() {
   const navigate = useNavigate();
+  const { refresh } = useTenancy();
   const { userId, isLoadingSession } = useAppState();
   const { userName } = useDisplayUser();
 
@@ -284,7 +285,13 @@ function TenantSetupRoute() {
     <TenantSetup
       userId={userId}
       userName={userName}
-      onDone={() => navigate('/tenant', { replace: true })}
+      // Wait for the new tenancy to be in hand. Navigating first sends the
+      // gate to judge the data from before it existed, which bounces straight
+      // back to this screen.
+      onDone={async () => {
+        await refresh();
+        navigate('/tenant', { replace: true });
+      }}
       onBack={() => navigate('/role')}
     />
   );
@@ -292,6 +299,7 @@ function TenantSetupRoute() {
 
 function LandlordSetupRoute() {
   const navigate = useNavigate();
+  const { refresh } = useTenancy();
   const { userId, isLoadingSession } = useAppState();
   const { userName } = useDisplayUser();
 
@@ -302,7 +310,10 @@ function LandlordSetupRoute() {
     <LandlordSetup
       userId={userId}
       userName={userName}
-      onDone={() => navigate('/landlord', { replace: true })}
+      onDone={async () => {
+        await refresh();
+        navigate('/landlord', { replace: true });
+      }}
       onBack={() => navigate('/role')}
     />
   );

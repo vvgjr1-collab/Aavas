@@ -39,8 +39,14 @@ interface TenancyContextValue {
   needsTenantSetup: boolean;
   needsLandlordSetup: boolean;
   error: string | null;
-  /** Re-read after a write, so a new payment or complaint shows up. */
-  refresh: () => void;
+  /**
+   * Re-read after a write, so a new payment or complaint shows up.
+   *
+   * Resolves once the new data is in. Callers that navigate straight into a
+   * gated screen have to await it: the gate no longer blanks during a refresh,
+   * so navigating first would have it judge the old data and bounce back.
+   */
+  refresh: () => Promise<void>;
 }
 
 const TenancyContext = createContext<TenancyContextValue | null>(null);
@@ -72,7 +78,17 @@ export function TenancyProvider({ children }: { children: ReactNode }) {
   // earned, for one.
   const accountRef = useRef<string | null>(userId);
 
-  const refresh = useCallback(() => setNonce(n => n + 1), []);
+  // Resolvers waiting for the refetch they asked for.
+  const waiting = useRef<(() => void)[]>([]);
+
+  const refresh = useCallback(
+    () =>
+      new Promise<void>(resolve => {
+        waiting.current.push(resolve);
+        setNonce(n => n + 1);
+      }),
+    [],
+  );
 
   const demo = isGuest || !isSupabaseConfigured || !isAuthenticated;
 
@@ -109,6 +125,7 @@ export function TenancyProvider({ children }: { children: ReactNode }) {
         if (!active) return;
         setLoading(false);
         setLoaded(true);
+        waiting.current.splice(0).forEach(resolve => resolve());
       });
 
     return () => {
