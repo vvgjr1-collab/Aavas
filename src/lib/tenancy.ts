@@ -375,6 +375,39 @@ export async function listMembers(tenancyId: string): Promise<TenancyMember[]> {
   });
 }
 
+export interface JoinCode {
+  code: string;
+  expires_at: string;
+  rotation_seconds: number;
+}
+
+/**
+ * The property's current join code, rotating it if the window has closed.
+ *
+ * Landlord-only, and read through a function rather than the table so a code
+ * cannot be found by querying for it.
+ */
+export async function currentJoinCode(propertyId: string): Promise<JoinCode | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc('current_join_code', {
+    p_property_id: propertyId,
+  });
+  if (error) fail(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  return (row as JoinCode) ?? null;
+}
+
+/** Retire the current code now, if it has gone somewhere it should not have. */
+export async function rotateJoinCode(propertyId: string): Promise<JoinCode | null> {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc('rotate_join_code', {
+    p_property_id: propertyId,
+  });
+  if (error) fail(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  return (row as JoinCode) ?? null;
+}
+
 /** Unused, unexpired invites for a tenancy - the code to share with a flatmate. */
 export async function listOpenInvites(
   tenancyId: string,

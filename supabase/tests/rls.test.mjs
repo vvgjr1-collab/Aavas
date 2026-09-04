@@ -554,6 +554,111 @@ const main = async () => {
   });
   check('payments survive the tenancy ending', kept > 0, true);
 
+  // --- rotating join codes -------------------------------------------------
+  console.log('\nrotating join codes:');
+
+  const propC = await asUser(db, landlordB, async () => {
+    const r = await db.query(
+      `insert into public.properties (landlord_id, title, address_line, city, rent, deposit)
+       values ($1, 'Flatshare', '5 Bandra Road', 'Mumbai', 40000, 80000) returning id`,
+      [landlordB],
+    );
+    return r.rows[0].id;
+  });
+
+  const firstCode = await asUser(db, landlordB, async () => {
+    const r = await db.query('select code, expires_at from public.current_join_code($1)', [propC]);
+    return r.rows[0];
+  });
+  check('a property has a code before it has any tenant', /^[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(firstCode.code), true);
+
+  const stable = await asUser(db, landlordB, async () => {
+    const r = await db.query('select code from public.current_join_code($1)', [propC]);
+    return r.rows[0].code;
+  });
+  check('asking again inside the window returns the same code', stable, firstCode.code);
+
+  checkDenied(
+    'another landlord cannot read it',
+    await expectDenied(db, landlordA, () =>
+      db.query('select code from public.current_join_code($1)', [propC]),
+    ),
+  );
+
+  const tenantsSeeNothing = await asUser(db, tenantA, async () => {
+    const r = await db.query('select count(*)::int as n from public.property_join_codes');
+    return r.rows[0].n;
+  });
+  check('a tenant cannot enumerate codes', tenantsSeeNothing, 0);
+
+  // Two flatmates, one code, one lease.
+  const joinedA = await asUser(db, tenantB, async () => {
+    const r = await db.query('select public.redeem_invite($1) as id', [firstCode.code]);
+    return r.rows[0].id;
+  });
+  check('the first flatmate joins and a tenancy is created', typeof joinedA, 'string');
+
+  const joinedB = await asUser(db, stranger, async () => {
+    const r = await db.query('select public.redeem_invite($1) as id', [firstCode.code]);
+    return r.rows[0].id;
+  });
+  check('the second flatmate reuses the same code', joinedB, joinedA);
+
+  const shared = await asUser(db, landlordB, async () => {
+    const r = await db.query(
+      'select count(*)::int as n from public.tenancy_members where tenancy_id = $1',
+      [joinedA],
+    );
+    const t = await db.query('select rent::int as rent, status from public.tenancies where id = $1', [joinedA]);
+    return { members: r.rows[0].n, ...t.rows[0] };
+  });
+  check('both are on one lease, on the property terms', shared, {
+    members: 2,
+    rent: 40000,
+    status: 'active',
+  });
+
+  checkDenied(
+    'the landlord cannot join their own property with it',
+    await expectDenied(db, landlordB, () =>
+      db.query('select public.redeem_invite($1)', [firstCode.code]),
+    ),
+  );
+
+  // Rotation retires the old one.
+  const rotated = await asUser(db, landlordB, async () => {
+    const r = await db.query('select code from public.rotate_join_code($1)', [propC]);
+    return r.rows[0].code;
+  });
+  check('rotating issues a different code', rotated !== firstCode.code, true);
+
+  checkDenied(
+    'the retired code no longer works',
+    await expectDenied(db, tenantA, () =>
+      db.query('select public.redeem_invite($1)', [firstCode.code]),
+    ),
+  );
+
+  // Expiry, forced by moving the window into the past.
+  await db.exec(
+    `update public.property_join_codes set expires_at = now() - interval '1 minute'
+     where property_id = '${propC}'`,
+  );
+  const expiredCode = rotated;
+  checkDenied(
+    'an expired code is refused',
+    await expectDenied(db, tenantA, () =>
+      db.query('select public.redeem_invite($1)', [expiredCode]),
+    ),
+  );
+
+  const refreshed = await asUser(db, landlordB, async () => {
+    const r = await db.query('select code from public.current_join_code($1)', [propC]);
+    return r.rows[0].code;
+  });
+  check('asking after expiry rotates to a new one', refreshed !== expiredCode, true);
+
+
   console.log(`\n${passed}/${passed + failed} checks passed`);
   process.exit(failed === 0 ? 0 : 1);
 };

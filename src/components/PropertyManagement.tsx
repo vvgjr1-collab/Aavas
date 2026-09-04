@@ -33,7 +33,6 @@ import { Progress } from './ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { TenancyAccess } from './landlord/TenancyAccess';
 import { useTenancy } from '../context/TenancyProvider';
-import { useAppState } from '../context/AppState';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -47,7 +46,6 @@ interface PropertyManagementProps {
 
 export function PropertyManagement({ property, onBack }: PropertyManagementProps) {
   const { tenancies } = useTenancy();
-  const { userId } = useAppState();
   // The live tenancy for this property, if there is one.
   const tenancy =
     tenancies.find(
@@ -257,7 +255,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
         </div>
       </motion.div>
 
-      <TenancyAccess tenancy={tenancy ?? null} userId={userId} />
+      <TenancyAccess propertyId={property.id} tenancy={tenancy} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 bg-[#f4eedf] dark:bg-[#2e3a8c]/20">

@@ -1,82 +1,131 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Users, Copy, Check, Plus, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Users, Copy, Check, RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import {
-  createInvite,
+  currentJoinCode,
   listMembers,
-  listOpenInvites,
+  rotateJoinCode,
   type DbTenancy,
+  type JoinCode,
   type TenancyMember,
 } from '../../lib/tenancy';
 
 const indigo = '#2e3a8c';
 
+/** mm:ss left, or null once it has run out. */
+function useCountdown(expiresAt: string | undefined, onExpire: () => void) {
+  const [left, setLeft] = useState<number | null>(null);
+  const fired = useRef(false);
+
+  useEffect(() => {
+    if (!expiresAt) return;
+    fired.current = false;
+    const tick = () => {
+      const ms = new Date(expiresAt).getTime() - Date.now();
+      setLeft(Math.max(0, Math.floor(ms / 1000)));
+      if (ms <= 0 && !fired.current) {
+        fired.current = true;
+        onExpire();
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [expiresAt, onExpire]);
+
+  return left;
+}
+
 /**
- * Who is on this tenancy, and the code to add someone else.
+ * Who is on this lease, and the code to add someone else.
  *
- * Two flatmates share one lease, so the second one joins with a code against
- * the same tenancy rather than getting a tenancy of their own. The code lives
- * here, on the property, because that is where a landlord looks when someone
- * asks how to get in.
+ * The code belongs to the property, not the tenancy, so it exists from the
+ * moment a property is listed - a landlord with no tenant yet still has
+ * something to hand out. It is valid for a window and rotates when that
+ * window closes, which is what lets two flatmates use the same one while
+ * stopping it becoming a permanent password to somebody's home.
  */
 export function TenancyAccess({
+  propertyId,
   tenancy,
-  userId,
 }: {
+  propertyId: string;
   tenancy: DbTenancy | null;
-  userId: string | null;
 }) {
   const [members, setMembers] = useState<TenancyMember[]>([]);
-  const [codes, setCodes] = useState<{ id: string; code: string; expires_at: string }[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
+  const [join, setJoin] = useState<JoinCode | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [rotating, setRotating] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(() => {
-    if (!tenancy) return;
+  const loadCode = useCallback(() => {
+    currentJoinCode(propertyId)
+      .then(setJoin)
+      .catch(err => setError(err instanceof Error ? err.message : String(err)))
+      .finally(() => setLoading(false));
+  }, [propertyId]);
+
+  useEffect(() => {
     setLoading(true);
-    Promise.all([listMembers(tenancy.id), listOpenInvites(tenancy.id)])
-      .then(([m, c]) => {
-        setMembers(m);
-        setCodes(c);
+    loadCode();
+  }, [loadCode]);
+
+  useEffect(() => {
+    if (!tenancy) {
+      setMembers([]);
+      return;
+    }
+    let active = true;
+    listMembers(tenancy.id)
+      .then(m => {
+        if (active) setMembers(m);
       })
       .catch(() => {
-        /* the panel simply stays empty */
-      })
-      .finally(() => setLoading(false));
+        /* the list simply stays empty */
+      });
+    return () => {
+      active = false;
+    };
   }, [tenancy?.id]);
 
-  useEffect(load, [load]);
+  // When the window closes, fetch the next code rather than leaving a dead one
+  // on screen for someone to read out.
+  const secondsLeft = useCountdown(join?.expires_at, loadCode);
 
-  if (!tenancy) return null;
-
-  const generate = () => {
-    if (!userId) return;
-    setCreating(true);
-    createInvite(tenancy.id, userId)
-      .then(code => {
-        setCodes(prev => [
-          { id: code, code, expires_at: new Date(Date.now() + 12096e5).toISOString() },
-          ...prev,
-        ]);
-        toast.success('New code created', { description: 'Share it with your tenant.' });
+  const rotate = () => {
+    setRotating(true);
+    rotateJoinCode(propertyId)
+      .then(next => {
+        setJoin(next);
+        toast.success('New code issued', { description: 'The previous one no longer works.' });
       })
-      .catch(err => toast.error('Could not create a code', { description: err.message }))
-      .finally(() => setCreating(false));
+      .catch(err => toast.error('Could not rotate the code', { description: err.message }))
+      .finally(() => setRotating(false));
   };
 
-  const copy = async (code: string) => {
+  const copy = async () => {
+    if (!join) return;
     try {
-      await navigator.clipboard.writeText(code);
-      setCopied(code);
-      setTimeout(() => setCopied(null), 2000);
+      await navigator.clipboard.writeText(join.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       // Clipboard access can be refused; the code is readable on screen.
     }
   };
+
+  const mmss =
+    secondsLeft == null
+      ? null
+      : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
+
+  // A code near the end of its window is about to change under whoever is
+  // reading it, so say so rather than letting them send a dud.
+  const expiringSoon = secondsLeft != null && secondsLeft <= 60;
 
   return (
     <Card className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/25">
@@ -93,97 +142,99 @@ export function TenancyAccess({
               Who lives here
             </CardTitle>
             <CardDescription>
-              Share a code to add another tenant to this same lease.
+              Share the code below to add a tenant to this lease.
             </CardDescription>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {loading && members.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : (
-          <ul className="space-y-2">
-            {members.map(m => (
-              <li
-                key={m.tenant_id}
-                className="flex items-center justify-between rounded-xl border border-[var(--hairline)] px-3 py-2"
-              >
-                <div>
-                  <p className="text-sm font-medium">{m.full_name}</p>
-                  <p className="text-xs text-muted-foreground">{m.email}</p>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  since{' '}
-                  {new Date(m.joined_at).toLocaleDateString('en-US', {
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </span>
-              </li>
-            ))}
-            {members.length === 0 && (
-              <li className="text-sm text-muted-foreground">Nobody has joined yet.</li>
-            )}
-          </ul>
-        )}
+      <CardContent className="space-y-5">
+        <ul className="space-y-2">
+          {members.map(m => (
+            <li
+              key={m.tenant_id}
+              className="flex items-center justify-between rounded-xl border border-[var(--hairline)] px-3 py-2"
+            >
+              <div>
+                <p className="text-sm font-medium">{m.full_name}</p>
+                <p className="text-xs text-muted-foreground">{m.email}</p>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                since{' '}
+                {new Date(m.joined_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </span>
+            </li>
+          ))}
+          {members.length === 0 && (
+            <li className="text-sm text-muted-foreground">
+              Nobody has joined yet. Share the code to get started.
+            </li>
+          )}
+        </ul>
 
-        {codes.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium" style={{ color: indigo }}>
-              Unused invite codes
-            </p>
-            {codes.map(c => (
-              <div
-                key={c.id}
-                className="flex items-center justify-between rounded-xl border border-dashed px-3 py-2"
-                style={{ borderColor: 'color-mix(in srgb, #2e3a8c 35%, transparent)' }}
+        <div
+          className="rounded-2xl border border-dashed p-5 text-center"
+          style={{ borderColor: `color-mix(in srgb, ${indigo} 35%, transparent)` }}
+        >
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading the current code…</p>
+          ) : error ? (
+            <p className="text-sm text-destructive">{error}</p>
+          ) : (
+            <>
+              <p
+                className="text-3xl font-semibold tracking-[0.18em] tabular-nums"
+                style={{ color: indigo }}
               >
-                <span
-                  className="text-lg font-semibold tracking-[0.14em] tabular-nums"
-                  style={{ color: indigo }}
-                >
-                  {c.code}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-11 sm:h-8 rounded-full"
-                  onClick={() => copy(c.code)}
-                >
-                  {copied === c.code ? (
+                {join?.code ?? '--------'}
+              </p>
+              <p
+                className={`mt-2 text-sm tabular-nums ${
+                  expiringSoon ? 'text-destructive' : 'text-muted-foreground'
+                }`}
+              >
+                {mmss ? `Changes in ${mmss}` : 'Rotating…'}
+              </p>
+
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <Button variant="outline" size="sm" className="h-11 sm:h-8 rounded-full" onClick={copy}>
+                  {copied ? (
                     <>
                       <Check className="h-4 w-4" /> Copied
                     </>
                   ) : (
                     <>
-                      <Copy className="h-4 w-4" /> Copy
+                      <Copy className="h-4 w-4" /> Copy code
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-11 sm:h-8 rounded-full"
+                  disabled={rotating}
+                  onClick={rotate}
+                >
+                  {rotating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4" /> New code
                     </>
                   )}
                 </Button>
               </div>
-            ))}
-          </div>
-        )}
-
-        <Button
-          variant="outline"
-          className="w-full"
-          disabled={creating || !userId}
-          onClick={generate}
-        >
-          {creating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <>
-              <Plus className="h-4 w-4" />
-              Create a code for another tenant
             </>
           )}
-        </Button>
+        </div>
+
         <p className="text-xs text-muted-foreground">
-          Each code works once and expires after 14 days. Everyone who joins
-          shares this lease and its rent.
+          The code changes every 15 minutes. Anyone who uses it while it is
+          valid joins this same lease, so flatmates can each join with the same
+          code &mdash; and a code that leaks stops working shortly after.
         </p>
       </CardContent>
     </Card>
