@@ -5,7 +5,10 @@
 
   export default defineConfig({
     plugins: [react()],
-    base: '/Aavas/', // Must have forward slashes for GitHub Pages
+    // Relative asset URLs, so the build works from any path: the GitHub Pages
+    // project subpath (/Aavas/), a domain root, or a local preview. Safe because
+    // the app has no client-side router - navigation is React state.
+    base: './',
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {

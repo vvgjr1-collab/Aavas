@@ -24,20 +24,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
           cache: "npm"
 
       - name: Install dependencies
-        run: npm install
-
-      - name: Install html2canvas
-        run: npm install html2canvas
+        run: npm ci
 
       - name: Build
         run: npm run build
-
-      - name: List build output
-        run: ls -la build/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
