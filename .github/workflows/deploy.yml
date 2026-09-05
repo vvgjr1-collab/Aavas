@@ -42,6 +42,11 @@ jobs:
       - name: Database policy tests
         run: npm run db:test
 
+      # Which month's rent is settled is date arithmetic, and driving the app
+      # only ever tests today. These pin the year boundary and the grace period.
+      - name: Rent period tests
+        run: npm run test:rent
+
       - name: Build
         run: npm run build
         env:

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Home, FileText, AlertCircle, CreditCard, MessageSquare, Settings, LogOut, Calendar, MapPin, Phone, Mail, Building, DollarSign, Clock, CheckCircle, AlertTriangle, User, Download, Wrench, IndianRupee } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -17,9 +17,19 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import type { TenantPropertyView } from '../lib/tenantView';
 import { useTenancy } from '../context/TenancyProvider';
 import { useAppState } from '../context/AppState';
-import { reportPayment } from '../lib/records';
+import { listComplaints, reportPayment } from '../lib/records';
+import { usePayments } from '../hooks/usePayments';
+import { currentRent, formatDue } from '../lib/rent';
 import { cancelEndRequest, requestEndTenancy, withdrawTenancy } from '../lib/tenancy';
 import { Repeat } from 'lucide-react';
+
+/** A pending claim is not an active tenancy, and saying so avoids a false reassurance. */
+const TENANCY_LABEL: Record<string, string> = {
+  active: 'Active',
+  pending: 'Awaiting confirmation',
+  ended: 'Ended',
+  rejected: 'Rejected',
+};
 
 interface TenantDashboardProps {
   userName: string;
@@ -49,7 +59,9 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
   const [cardCvv, setCardCvv] = useState('');
   const [bankName, setBankName] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [isRentPaid, setIsRentPaid] = useState(false);
+  // Held only to keep the card settled between recording a payment and the
+  // reload that proves it; the database is what actually answers the question.
+  const [justPaid, setJustPaid] = useState(false);
   const { myTenancy, refresh } = useTenancy();
   const { userId, isAuthenticated } = useAppState();
   const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -103,6 +115,37 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
   };
 
   const propertyData = property;
+
+  // "Rent Paid for December" was hardcoded, so it said December in September
+  // and stayed true only until the page was reloaded. Both the month and the
+  // status now come from the payments on this tenancy - the same rows the
+  // landlord reads on their side of it.
+  const { payments, reload: reloadPayments } = usePayments(myTenancy?.id);
+  const { period, settled, nextDue } = currentRent({
+    start: myTenancy?.start_date,
+    rent: Number(myTenancy?.rent) || Number(myTenancy?.proposed_rent) || 0,
+    payments,
+  });
+  const isRentPaid = settled || justPaid;
+
+  const [openRequests, setOpenRequests] = useState(0);
+  useEffect(() => {
+    if (!myTenancy) {
+      setOpenRequests(0);
+      return;
+    }
+    let active = true;
+    listComplaints(myTenancy.id)
+      .then(rows => {
+        if (active) setOpenRequests(rows.filter(c => c.status !== 'resolved' && c.status !== 'closed').length);
+      })
+      .catch(() => {
+        /* the count stays at zero rather than breaking the dashboard */
+      });
+    return () => {
+      active = false;
+    };
+  }, [myTenancy?.id]);
 
   const actionButtons = [
     {
@@ -194,7 +237,7 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
           description: 'Sign in with an account to record real payments.',
           duration: 5000,
         });
-        setIsRentPaid(true);
+        setJustPaid(true);
       }, 1200);
       return;
     }
@@ -217,12 +260,15 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
           : paymentMethod === 'netbanking'
             ? bankName
             : cardNumber.slice(-4).padStart(4, '*'),
-      dueDate: null,
+      // Which month this covers, so the landlord's rent history and this card
+      // agree about it instead of each guessing from the date it was made.
+      dueDate: nextDue.dueOn.slice(0, 10),
     })
       .then(() => {
         setShowPaymentDialog(false);
         clearForm();
-        setIsRentPaid(true);
+        setJustPaid(true);
+        reloadPayments();
         refresh();
         toast.success('Payment recorded', {
           description: 'Your landlord will see it and confirm receipt.',
@@ -398,7 +444,7 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
                   </div>
                   <div>
                     <p className="text-muted-foreground">Next Rent Due</p>
-                    <p className="text-orange-600 dark:text-orange-400">{propertyData.nextRentDue}</p>
+                    <p className="text-orange-600 dark:text-orange-400">{nextDue.label} &middot; {formatDue(nextDue.dueOn)}</p>
                   </div>
                 </div>
               </div>
@@ -498,7 +544,13 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
                     color: isRentPaid ? 'var(--tenant-success-dark)' : '#d97706'
                   }}
                 >
-                  {isRentPaid ? 'Paid' : 'Due'}
+                  {isRentPaid
+                    ? period.status === 'reported'
+                      ? 'Reported'
+                      : 'Paid'
+                    : period.status === 'late'
+                      ? 'Overdue'
+                      : 'Due'}
                 </Badge>
               </div>
 
@@ -513,7 +565,7 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
                     color: 'var(--tenant-success-dark)'
                   }}
                 >
-                  Active
+                  {TENANCY_LABEL[myTenancy?.status ?? 'active'] ?? 'Active'}
                 </Badge>
               </div>
 
@@ -530,7 +582,7 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
                       color: 'var(--tenant-primary)'
                     }}
                   >
-                    0
+                    {openRequests}
                   </Badge>
                 </div>
               </div>
@@ -548,12 +600,14 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Next Payment Due</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {nextDue.status === 'late' ? 'Overdue' : 'Next Payment Due'}
+                    </p>
                     <p className="text-2xl" style={{ color: 'var(--tenant-primary)' }}>
                       {propertyData.lease.monthlyRent}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Due on {propertyData.nextRentDue}
+                      {nextDue.label} &middot; due {formatDue(nextDue.dueOn)}
                     </p>
                   </div>
                   <Button
@@ -581,20 +635,36 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
                   </div>
                   <div>
                     <p className="text-xl" style={{ color: 'var(--tenant-primary)' }}>
-                      Rent Paid for December
+                      Rent paid for {period.label}
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Nothing due at this time
+                      {period.status === 'reported'
+                        ? 'Waiting for your landlord to confirm receipt'
+                        : 'Confirmed by your landlord'}
                     </p>
                   </div>
                   <div className="pt-2 space-y-1">
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Amount Paid</span>
-                      <span className="font-medium">{propertyData.lease.monthlyRent}</span>
+                      <span className="font-medium">
+                        {period.amount > 0
+                          ? `₹${Number(period.amount).toLocaleString('en-IN')}`
+                          : propertyData.lease.monthlyRent}
+                      </span>
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Payment Date</span>
-                      <span className="font-medium">{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      <span className="font-medium">
+                        {period.paidAt
+                          ? new Date(period.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : '--'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Next Due</span>
+                      <span className="font-medium">
+                        {nextDue.label} &middot; {formatDue(nextDue.dueOn)}
+                      </span>
                     </div>
                   </div>
                 </motion.div>
@@ -709,7 +779,7 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
                   <Separator className="my-2" />
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Due Date</span>
-                    <span>{propertyData.nextRentDue}</span>
+                    <span>{nextDue.label} &middot; {formatDue(nextDue.dueOn)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Property</span>

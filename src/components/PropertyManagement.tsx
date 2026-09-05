@@ -34,11 +34,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { TenancyAccess } from './landlord/TenancyAccess';
 import { TenantActivity } from './landlord/TenantActivity';
 import { useTenancy } from '../context/TenancyProvider';
+import { usePayments } from '../hooks/usePayments';
+import { rentHistory as rentPeriods, type RentPeriod } from '../lib/rent';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
 import type { PropertyData } from '../types/property';
+
+const money = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+
+const shortDay = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+/** 'reported' is the tenant's word for it; 'Awaiting confirmation' is the landlord's. */
+const STATUS_LABEL: Record<RentPeriod['status'], string> = {
+  paid: 'Paid',
+  reported: 'Awaiting confirmation',
+  due: 'Due',
+  late: 'Late',
+  upcoming: 'Upcoming',
+};
 
 interface PropertyManagementProps {
   property: PropertyData;
@@ -52,6 +68,8 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
     tenancies.find(
       t => t.property_id === property.id && (t.status === 'active' || t.status === 'pending'),
     ) ?? null;
+
+  const { payments } = usePayments(tenancy?.id);
 
   const [activeTab, setActiveTab] = useState('tenant');
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -135,7 +153,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
   };
 
   const generateReportData = () => {
-    const overduePayments = rentHistory.filter(r => r.status === 'late' || r.status === 'unpaid');
+    const overduePayments = rentHistory.filter(r => r.status === 'late' || r.status === 'due');
     const latestRent = rentHistory[0];
     const unpaidUtilities = utilityBills.filter(u => u.status === 'unpaid' || u.status === 'pending');
     
@@ -156,13 +174,14 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
     };
   };
 
-  const rentHistory = [
-    { month: 'November 2024', amount: property.rent, status: 'paid', dueDate: 'Nov 1', paidDate: 'Oct 30' },
-    { month: 'October 2024', amount: property.rent, status: 'paid', dueDate: 'Oct 1', paidDate: 'Sep 29' },
-    { month: 'September 2024', amount: property.rent, status: 'paid', dueDate: 'Sep 1', paidDate: 'Aug 31' },
-    { month: 'August 2024', amount: property.rent, status: 'late', dueDate: 'Aug 1', paidDate: 'Aug 5' },
-    { month: 'July 2024', amount: property.rent, status: 'paid', dueDate: 'Jul 1', paidDate: 'Jun 30' }
-  ];
+  // The five invented months this replaced were the same whoever was looking,
+  // so the landlord's "Rent Status" could never disagree with what the tenant
+  // had actually paid. Both sides now read the payments table.
+  const rentHistory = rentPeriods({
+    start: tenancy?.start_date,
+    rent: Number(tenancy?.rent) || Number(tenancy?.proposed_rent) || 0,
+    payments,
+  });
 
   const utilityBills = [
     {
@@ -206,9 +225,12 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-      case 'unpaid': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-      case 'pending': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'unpaid':
+      case 'due': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+      case 'pending':
+      case 'reported': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
       case 'late': return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
+      case 'upcoming': return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300';
     }
   };
@@ -216,8 +238,11 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'paid': return <CheckCircle className="w-4 h-4" />;
-      case 'unpaid': return <XCircle className="w-4 h-4" />;
-      case 'pending': return <Clock className="w-4 h-4" />;
+      case 'unpaid':
+      case 'due': return <XCircle className="w-4 h-4" />;
+      case 'pending':
+      case 'reported':
+      case 'upcoming': return <Clock className="w-4 h-4" />;
       case 'late': return <AlertCircle className="w-4 h-4" />;
       default: return <AlertCircle className="w-4 h-4" />;
     }
@@ -384,29 +409,37 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {!tenancy ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nobody has joined this property yet, so there is no rent to track.
+                  </p>
+                ) : (
                 <div className="space-y-4">
-                  {rentHistory.map((payment, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border border-[#2e3a8c]/20 dark:border-[#2e3a8c]/40 rounded-lg bg-[#f4eedf]/20">
+                  {rentHistory.map(period => (
+                    <div key={period.key} className="flex items-center justify-between p-4 border border-[#2e3a8c]/20 dark:border-[#2e3a8c]/40 rounded-lg bg-[#f4eedf]/20">
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
-                          {getStatusIcon(payment.status)}
+                          {getStatusIcon(period.status)}
                           <div>
-                            <p className="font-medium">{payment.month}</p>
+                            <p className="font-medium">{period.label}</p>
                             <p className="text-sm text-muted-foreground">
-                              Due: {payment.dueDate} | Paid: {payment.paidDate}
+                              Due {shortDay(period.dueOn)}
+                              {period.paidAt ? ` | Paid ${shortDay(period.paidAt)}` : ''}
+                              {period.payment ? ` | ${period.payment.method}` : ''}
                             </p>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
-                        <Badge className={getStatusColor(payment.status)}>
-                          {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                        <Badge className={getStatusColor(period.status)}>
+                          {STATUS_LABEL[period.status]}
                         </Badge>
-                        <span className="font-medium">{payment.amount}</span>
+                        <span className="font-medium">{money(period.amount)}</span>
                       </div>
                     </div>
                   ))}
                 </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -673,24 +706,24 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <p className="text-muted-foreground text-sm">Period</p>
-                        <p>{rentHistory[0].month}</p>
+                        <p>{rentHistory[0].label}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-muted-foreground text-sm">Amount</p>
-                        <p>{rentHistory[0].amount}</p>
+                        <p>{money(rentHistory[0].amount)}</p>
                       </div>
                       <Badge className={getStatusColor(rentHistory[0].status)}>
-                        {rentHistory[0].status.toUpperCase()}
+                        {STATUS_LABEL[rentHistory[0].status]}
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
                         <p className="text-muted-foreground">Due Date</p>
-                        <p>{rentHistory[0].dueDate}</p>
+                        <p>{shortDay(rentHistory[0].dueOn)}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Paid Date</p>
-                        <p>{rentHistory[0].paidDate}</p>
+                        <p>{rentHistory[0].paidAt ? shortDay(rentHistory[0].paidAt) : 'Not yet'}</p>
                       </div>
                     </div>
                   </div>
@@ -713,15 +746,15 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                           >
                             <div className="flex items-center justify-between">
                               <div>
-                                <p>{payment.month}</p>
+                                <p>{payment.label}</p>
                                 <p className="text-sm text-muted-foreground">
-                                  Due: {payment.dueDate} | Paid: {payment.paidDate}
+                                  Due {shortDay(payment.dueOn)}
                                 </p>
                               </div>
                               <div className="text-right">
-                                <p>{payment.amount}</p>
+                                <p>{money(payment.amount)}</p>
                                 <Badge className={getStatusColor(payment.status)}>
-                                  {payment.status.toUpperCase()}
+                                  {STATUS_LABEL[payment.status]}
                                 </Badge>
                               </div>
                             </div>
@@ -751,15 +784,15 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                         </tr>
                       </thead>
                       <tbody>
-                        {rentHistory.map((rent, index) => (
-                          <tr key={index} className="border-t border-[#2e3a8c]/10">
-                            <td className="p-3">{rent.month}</td>
-                            <td className="p-3">{rent.amount}</td>
-                            <td className="p-3">{rent.dueDate}</td>
-                            <td className="p-3">{rent.paidDate}</td>
+                        {rentHistory.map(period => (
+                          <tr key={period.key} className="border-t border-[#2e3a8c]/10">
+                            <td className="p-3">{period.label}</td>
+                            <td className="p-3">{money(period.amount)}</td>
+                            <td className="p-3">{shortDay(period.dueOn)}</td>
+                            <td className="p-3">{period.paidAt ? shortDay(period.paidAt) : '--'}</td>
                             <td className="p-3">
-                              <Badge className={getStatusColor(rent.status)}>
-                                {rent.status.toUpperCase()}
+                              <Badge className={getStatusColor(period.status)}>
+                                {STATUS_LABEL[period.status]}
                               </Badge>
                             </td>
                           </tr>
