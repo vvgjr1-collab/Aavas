@@ -382,6 +382,8 @@ export interface TenancyMember {
   joined_at: string;
   full_name: string;
   email: string;
+  /** Empty when the tenant has not given one; profiles allows it to be null. */
+  phone: string;
 }
 
 /** Everyone on a tenancy - flatmates included. */
@@ -397,7 +399,7 @@ export async function listMembers(tenancyId: string): Promise<TenancyMember[]> {
 
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, full_name, email')
+    .select('id, full_name, email, phone')
     .in('id', rows.map(r => r.tenant_id));
 
   return rows.map(r => {
@@ -407,6 +409,7 @@ export async function listMembers(tenancyId: string): Promise<TenancyMember[]> {
       joined_at: r.joined_at,
       full_name: p?.full_name || p?.email || 'Tenant',
       email: p?.email || '',
+      phone: p?.phone || '',
     };
   });
 }

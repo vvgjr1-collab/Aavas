@@ -35,10 +35,10 @@ import { TenancyAccess } from './landlord/TenancyAccess';
 import { TenantActivity } from './landlord/TenantActivity';
 import { useTenancy } from '../context/TenancyProvider';
 import { usePayments } from '../hooks/usePayments';
+import { useMembers } from '../hooks/useMembers';
 import { rentHistory as rentPeriods, type RentPeriod } from '../lib/rent';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
 import type { PropertyData } from '../types/property';
 
@@ -46,6 +46,19 @@ const money = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
 const shortDay = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+const longDay = (iso: string | null | undefined) =>
+  iso
+    ? new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : 'Not recorded';
+
+/** A pending lease is not an active one, and the badge should not imply otherwise. */
+const LEASE_LABEL: Record<string, string> = {
+  active: 'Active lease',
+  pending: 'Awaiting a tenant',
+  ended: 'Ended',
+  rejected: 'Rejected',
+};
 
 /** 'reported' is the tenant's word for it; 'Awaiting confirmation' is the landlord's. */
 const STATUS_LABEL: Record<RentPeriod['status'], string> = {
@@ -70,22 +83,18 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
     ) ?? null;
 
   const { payments } = usePayments(tenancy?.id);
+  const { members } = useMembers(tenancy?.id);
 
   const [activeTab, setActiveTab] = useState('tenant');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [newMessage, setNewMessage] = useState('');
 
-  // Mock tenant and billing data
-  const [tenantData, setTenantData] = useState(property.tenant || {
-    name: 'Rajesh Kumar',
-    phone: '+91 98765 43210',
-    email: 'rajesh.kumar@email.com',
-    moveInDate: 'March 15, 2024'
-  });
-
-  const [editedTenant, setEditedTenant] = useState({ ...tenantData });
+  // The tenant is whoever joined this lease, read from their own profile.
+  // A landlord cannot edit somebody else's account, so the "Edit Details"
+  // dialog that used to sit here only ever changed local state and lost it on
+  // reload - an invitation to record something that was never saved.
+  const tenant = members[0] ?? null;
 
   // Mock chat messages
   const [messages, setMessages] = useState([
@@ -137,34 +146,17 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
     window.print();
   };
 
-  const handleEditTenant = () => {
-    setEditedTenant({ ...tenantData });
-    setIsEditOpen(true);
-  };
-
-  const handleSaveEdit = () => {
-    setTenantData(editedTenant);
-    setIsEditOpen(false);
-  };
-
-  const handleCancelEdit = () => {
-    setEditedTenant({ ...tenantData });
-    setIsEditOpen(false);
-  };
-
   const generateReportData = () => {
     const overduePayments = rentHistory.filter(r => r.status === 'late' || r.status === 'due');
     const latestRent = rentHistory[0];
-    const unpaidUtilities = utilityBills.filter(u => u.status === 'unpaid' || u.status === 'pending');
     
     return {
       property,
-      tenant: tenantData,
+      tenant,
       latestRent,
       overduePayments,
       rentHistory,
       utilityBills,
-      unpaidUtilities,
       messages,
       generatedDate: new Date().toLocaleDateString('en-IN', { 
         year: 'numeric', 
@@ -183,43 +175,15 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
     payments,
   });
 
+  // Four invented bills used to sit here - amounts, providers, meter readings,
+  // all of it made up and identical on every property. Nothing in the app reads
+  // a utility account, so the honest thing is to say which ones are not
+  // connected rather than to show a number somebody might act on.
   const utilityBills = [
-    {
-      type: 'Electricity',
-      icon: Zap,
-      amount: '₹3,245',
-      dueDate: 'Dec 15, 2024',
-      status: 'unpaid',
-      provider: 'Maharashtra State Electricity Board',
-      usage: '245 kWh'
-    },
-    {
-      type: 'Water',
-      icon: Droplets,
-      amount: '₹850',
-      dueDate: 'Dec 10, 2024',
-      status: 'paid',
-      provider: 'Mumbai Municipal Corporation',
-      usage: '15,000 L'
-    },
-    {
-      type: 'Internet',
-      icon: Wifi,
-      amount: '₹1,299',
-      dueDate: 'Dec 5, 2024',
-      status: 'paid',
-      provider: 'Jio Fiber',
-      usage: '500 GB'
-    },
-    {
-      type: 'Gas',
-      icon: Thermometer,
-      amount: '₹645',
-      dueDate: 'Dec 20, 2024',
-      status: 'pending',
-      provider: 'Indraprastha Gas Limited',
-      usage: '45 SCM'
-    }
+    { type: 'Electricity', icon: Zap },
+    { type: 'Water', icon: Droplets },
+    { type: 'Internet', icon: Wifi },
+    { type: 'Gas', icon: Thermometer },
   ];
 
   const getStatusColor = (status: string) => {
@@ -316,75 +280,87 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
           >
             <Card className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/30 dark:border-[#2e3a8c]/50 bg-gradient-to-br from-[#f4eedf]/30 to-white dark:from-[#2e3a8c]/10 dark:to-card">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-[#2e3a8c] rounded-full flex items-center justify-center">
-                      <User className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-[#2e3a8c] dark:text-[#4a5bb0]">
-                        Current Tenant
-                      </CardTitle>
-                      <CardDescription>
-                        Active lease information
-                      </CardDescription>
-                    </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-[#2e3a8c] rounded-full flex items-center justify-center">
+                    <User className="w-6 h-6 text-white" />
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-11 sm:h-8 border-[#2e3a8c]/30 text-[#2e3a8c] hover:bg-[#f4eedf]"
-                    onClick={handleEditTenant}
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit Details
-                  </Button>
+                  <div>
+                    <CardTitle className="text-[#2e3a8c] dark:text-[#4a5bb0]">
+                      {members.length > 1 ? 'Current Tenants' : 'Current Tenant'}
+                    </CardTitle>
+                    <CardDescription>
+                      {members.length > 0
+                        ? 'From their own account, not from your notes'
+                        : 'Nobody has joined this lease yet'}
+                    </CardDescription>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                {members.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Share the code in <span className="font-medium">Who lives here</span> above
+                    and whoever uses it will appear here, with the details from their
+                    own account.
+                  </p>
+                ) : (
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-[#2e3a8c] dark:text-[#4a5bb0] mb-2">Personal Information</h3>
-                      <div className="space-y-3">
+                  <div className="space-y-5">
+                    <h3 className="text-[#2e3a8c] dark:text-[#4a5bb0] mb-2">Personal Information</h3>
+                    {members.map(m => (
+                      <div key={m.tenant_id} className="space-y-3">
                         <div className="flex items-center space-x-3">
                           <User className="w-4 h-4 text-muted-foreground" />
-                          <span>{tenantData.name}</span>
+                          <span>{m.full_name}</span>
                         </div>
                         <div className="flex items-center space-x-3">
                           <Phone className="w-4 h-4 text-muted-foreground" />
-                          <span>{tenantData.phone}</span>
+                          <span className={m.phone ? '' : 'text-muted-foreground'}>
+                            {m.phone || 'No number given'}
+                          </span>
                         </div>
                         <div className="flex items-center space-x-3">
                           <Mail className="w-4 h-4 text-muted-foreground" />
-                          <span>{tenantData.email}</span>
+                          <span>{m.email}</span>
                         </div>
+                        {members.length > 1 && <Separator />}
                       </div>
-                    </div>
+                    ))}
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-[#2e3a8c] dark:text-[#4a5bb0] mb-2">Lease Information</h3>
                       <div className="space-y-3">
                         <div className="flex items-center space-x-3">
                           <Calendar className="w-4 h-4 text-muted-foreground" />
-                          <span>Move-in: {tenantData.moveInDate}</span>
+                          <span>Moved in: {longDay(tenancy?.start_date ?? members[0]?.joined_at)}</span>
                         </div>
                         <div className="flex items-center space-x-3">
                           <DollarSign className="w-4 h-4 text-muted-foreground" />
-                          <span>Monthly Rent: {property.rent}</span>
+                          <span>Monthly Rent: {money(Number(tenancy?.rent) || 0)}</span>
                         </div>
                         <div className="flex items-center space-x-3">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                            Active Lease
+                          {tenancy?.status === 'active' ? (
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-yellow-600" />
+                          )}
+                          <Badge className={getStatusColor(tenancy?.status === 'active' ? 'paid' : 'pending')}>
+                            {LEASE_LABEL[tenancy?.status ?? 'pending']}
                           </Badge>
                         </div>
+                        {tenancy?.end_requested_at && (
+                          <p className="text-sm text-orange-600 dark:text-orange-400">
+                            They have asked to end this tenancy - approve it under
+                            &ldquo;Requests to leave&rdquo; on your dashboard.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -453,31 +429,36 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
             transition={{ delay: 0.2 }}
             className="grid gap-4"
           >
-            {utilityBills.map((bill, index) => {
+            <Card className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/30 dark:border-[#2e3a8c]/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[#2e3a8c] dark:text-[#4a5bb0] text-lg">
+                  No utility accounts connected
+                </CardTitle>
+                <CardDescription>
+                  Aavas cannot read a bill until the account details for this
+                  property are connected. Nothing below is an amount owed.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            {utilityBills.map(bill => {
               const IconComponent = bill.icon;
               return (
-                <Card key={index} className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/30 dark:border-[#2e3a8c]/50 bg-gradient-to-br from-[#f4eedf]/30 to-white dark:from-[#2e3a8c]/10 dark:to-card">
+                <Card key={bill.type} className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/30 dark:border-[#2e3a8c]/50 bg-gradient-to-br from-[#f4eedf]/30 to-white dark:from-[#2e3a8c]/10 dark:to-card">
                   <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 bg-[#2e3a8c] rounded-full flex items-center justify-center">
                           <IconComponent className="w-6 h-6 text-white" />
                         </div>
                         <div>
                           <h3 className="font-medium text-[#2e3a8c] dark:text-[#4a5bb0]">{bill.type}</h3>
-                          <p className="text-sm text-muted-foreground">{bill.provider}</p>
-                          <p className="text-xs text-muted-foreground">Usage: {bill.usage}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Account details yet to be connected
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right space-y-2">
-                        <div className="flex items-center space-x-3">
-                          <Badge className={getStatusColor(bill.status)}>
-                            {bill.status.charAt(0).toUpperCase() + bill.status.slice(1)}
-                          </Badge>
-                          <span className="font-medium text-lg">{bill.amount}</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">Due: {bill.dueDate}</p>
-                      </div>
+                      <Badge className={getStatusColor('upcoming')}>Not connected</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -526,7 +507,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                 </div>
                 <div>
                   <DialogTitle className="text-white">
-                    {tenantData.name}
+                    {tenant?.full_name ?? 'No tenant yet'}
                   </DialogTitle>
                   <DialogDescription className="text-white/80">
                     Tenant at {property.title}
@@ -676,19 +657,19 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
                         <p className="text-muted-foreground">Name</p>
-                        <p>{tenantData.name}</p>
+                        <p>{tenant?.full_name ?? 'Nobody has joined yet'}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Email</p>
-                        <p>{tenantData.email}</p>
+                        <p>{tenant?.email || '--'}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Phone</p>
-                        <p>{tenantData.phone}</p>
+                        <p>{tenant?.phone || 'No number given'}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Move-in Date</p>
-                        <p>{tenantData.moveInDate}</p>
+                        <p>{longDay(tenancy?.start_date ?? tenant?.joined_at)}</p>
                       </div>
                     </div>
                   </div>
@@ -810,61 +791,33 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                     Utility Bills Overview
                   </h3>
                   <div className="space-y-3">
-                    {utilityBills.map((utility, index) => {
+                    {utilityBills.map(utility => {
                       const UtilityIcon = utility.icon;
                       return (
-                        <div 
-                          key={index}
-                          className={`border rounded-lg p-4 ${
-                            utility.status === 'unpaid' || utility.status === 'pending'
-                              ? 'border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950/20'
-                              : 'border-[#2e3a8c]/30'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
+                        <div key={utility.type} className="border border-[#2e3a8c]/30 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)] ${
-                                utility.status === 'paid' ? 'bg-green-100 dark:bg-green-900' : 'bg-yellow-100 dark:bg-yellow-900'
-                              }`}>
-                                <UtilityIcon className={`w-5 h-5 ${
-                                  utility.status === 'paid' ? 'text-green-600 dark:text-green-300' : 'text-yellow-600 dark:text-yellow-300'
-                                }`} />
+                              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-[var(--shadow-xs)] bg-slate-100 dark:bg-slate-800">
+                                <UtilityIcon className="w-5 h-5 text-slate-500" />
                               </div>
                               <div>
                                 <p>{utility.type}</p>
-                                <p className="text-sm text-muted-foreground">{utility.provider}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Account details yet to be connected
+                                </p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p>{utility.amount}</p>
-                              <Badge className={getStatusColor(utility.status)}>
-                                {utility.status.toUpperCase()}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                            <div>Usage: {utility.usage}</div>
-                            <div className="text-right">Due: {utility.dueDate}</div>
+                            <Badge className={getStatusColor('upcoming')}>Not connected</Badge>
                           </div>
                         </div>
                       );
                     })}
                   </div>
 
-                  {/* Unpaid Utilities Summary */}
-                  {generateReportData().unpaidUtilities.length > 0 && (
-                    <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg">
-                      <p className="text-red-600 dark:text-red-400">
-                        <AlertCircle className="w-4 h-4 inline mr-2" />
-                        {generateReportData().unpaidUtilities.length} utility bill(s) pending payment
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Total pending: {generateReportData().unpaidUtilities.reduce((sum, u) => 
-                          sum + parseInt(u.amount.replace(/[₹,]/g, '')), 0
-                        ).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
-                      </p>
-                    </div>
-                  )}
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    No utility account is connected to this property, so this report
+                    carries no utility figures.
+                  </p>
                 </div>
 
                 {/* General Comments */}
@@ -932,85 +885,6 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
         </DialogContent>
       </Dialog>
 
-      {/* Edit Tenant Dialog */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-[#2e3a8c]">Edit Tenant Details</DialogTitle>
-            <DialogDescription>
-              Update the tenant information for this property.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name" className="text-[#2e3a8c]">
-                Full Name
-              </Label>
-              <Input
-                id="edit-name"
-                value={editedTenant.name}
-                onChange={(e) => setEditedTenant({ ...editedTenant, name: e.target.value })}
-                className="border-[#2e3a8c]/30 focus-visible:ring-[#2e3a8c]"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-phone" className="text-[#2e3a8c]">
-                Phone Number
-              </Label>
-              <Input
-                id="edit-phone"
-                value={editedTenant.phone}
-                onChange={(e) => setEditedTenant({ ...editedTenant, phone: e.target.value })}
-                className="border-[#2e3a8c]/30 focus-visible:ring-[#2e3a8c]"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-email" className="text-[#2e3a8c]">
-                Email Address
-              </Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={editedTenant.email}
-                onChange={(e) => setEditedTenant({ ...editedTenant, email: e.target.value })}
-                className="border-[#2e3a8c]/30 focus-visible:ring-[#2e3a8c]"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-moveInDate" className="text-[#2e3a8c]">
-                Move-in Date
-              </Label>
-              <Input
-                id="edit-moveInDate"
-                value={editedTenant.moveInDate}
-                onChange={(e) => setEditedTenant({ ...editedTenant, moveInDate: e.target.value })}
-                className="border-[#2e3a8c]/30 focus-visible:ring-[#2e3a8c]"
-                placeholder="e.g., March 15, 2024"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={handleCancelEdit}
-              className="border-[#2e3a8c]/30"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveEdit}
-              className="bg-[#2e3a8c] hover:bg-[#1f2861] text-white"
-            >
-              Save Changes
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </motion.div>
   );
 }
