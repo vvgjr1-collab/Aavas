@@ -34,6 +34,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { TenancyAccess } from './landlord/TenancyAccess';
 import { TenantActivity } from './landlord/TenantActivity';
 import { useTenancy } from '../context/TenancyProvider';
+import { useAppState } from '../context/AppState';
+import { PropertyEditor } from './landlord/PropertyEditor';
+import { EndNotice } from './tenancy/EndNotice';
 import { usePayments } from '../hooks/usePayments';
 import { useMembers } from '../hooks/useMembers';
 import { rentHistory as rentPeriods, type RentPeriod } from '../lib/rent';
@@ -75,7 +78,10 @@ interface PropertyManagementProps {
 }
 
 export function PropertyManagement({ property, onBack }: PropertyManagementProps) {
-  const { tenancies } = useTenancy();
+  const { tenancies, properties, refresh } = useTenancy();
+  const { userId } = useAppState();
+  // The row behind the display shape, for the editor to write back to.
+  const dbProperty = properties.find(p => p.id === property.id) ?? null;
   // The live tenancy for this property, if there is one.
   const tenancy =
     tenancies.find(
@@ -86,6 +92,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
   const { members } = useMembers(tenancy?.id);
 
   const [activeTab, setActiveTab] = useState('tenant');
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [newMessage, setNewMessage] = useState('');
@@ -248,6 +255,18 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
       <TenancyAccess propertyId={property.id} tenancy={tenancy} />
 
       <TenantActivity tenancy={tenancy} />
+
+      {/* Notice runs both ways: the landlord can give it here, and agrees to
+          the tenant's here too, on the property it concerns. */}
+      {tenancy && tenancy.status === 'active' && (
+        <EndNotice
+          tenancy={tenancy}
+          viewerId={userId}
+          role="landlord"
+          counterparty={members[0]?.full_name ?? 'Your tenant'}
+          onChanged={refresh}
+        />
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 bg-[#f4eedf] dark:bg-[#2e3a8c]/20">
@@ -490,7 +509,12 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
           <FileText className="w-4 h-4 mr-2" />
           Generate Report
         </Button>
-        <Button variant="outline" className="border-[#2e3a8c]/30 text-[#2e3a8c] hover:bg-[#f4eedf]">
+        <Button
+          variant="outline"
+          className="border-[#2e3a8c]/30 text-[#2e3a8c] hover:bg-[#f4eedf]"
+          disabled={!dbProperty}
+          onClick={() => setIsEditorOpen(true)}
+        >
           <Edit className="w-4 h-4 mr-2" />
           Update Property
         </Button>
@@ -885,6 +909,15 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
         </DialogContent>
       </Dialog>
 
+      {dbProperty && (
+        <PropertyEditor
+          open={isEditorOpen}
+          onOpenChange={setIsEditorOpen}
+          property={dbProperty}
+          tenancy={tenancy}
+          onSaved={refresh}
+        />
+      )}
     </motion.div>
   );
 }

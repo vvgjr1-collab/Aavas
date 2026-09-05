@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { photoUrl } from './photos';
 import type { Property, PropertyType, PropertyStatus } from '../types/property';
 import type { DbProperty, DbTenancy } from './tenancy';
 
@@ -15,12 +16,14 @@ const FALLBACK_IMAGE =
 const day = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');
 
 /**
- * The listing wizard still records placeholder filenames rather than uploading
- * anything, and a bare "property_1234.jpg" used as an img src renders as a
- * broken image. Show only real URLs until property photos go to storage.
+ * Uploaded photos resolve to public URLs; the seed portfolio's Unsplash links
+ * pass through unchanged. Anything else - the bare "property_1234.jpg" the old
+ * listing wizard recorded - is dropped rather than rendered as a broken image.
  */
 function usableImages(paths: string[] | null | undefined): string[] {
-  const usable = (paths ?? []).filter(src => src.startsWith('http'));
+  const usable = (paths ?? [])
+    .map(photoUrl)
+    .filter((src): src is string => Boolean(src));
   return usable.length > 0 ? usable : [FALLBACK_IMAGE];
 }
 

@@ -20,7 +20,8 @@ import { useAppState } from '../context/AppState';
 import { listComplaints, reportPayment } from '../lib/records';
 import { usePayments } from '../hooks/usePayments';
 import { currentRent, formatDue } from '../lib/rent';
-import { cancelEndRequest, requestEndTenancy, withdrawTenancy } from '../lib/tenancy';
+import { withdrawTenancy } from '../lib/tenancy';
+import { EndNotice } from './tenancy/EndNotice';
 import { Repeat } from 'lucide-react';
 
 /** A pending claim is not an active tenancy, and saying so avoids a false reassurance. */
@@ -66,35 +67,6 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
   const { userId, isAuthenticated } = useAppState();
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
-
-  const [isLeaving, setIsLeaving] = useState(false);
-  const endRequested = Boolean(myTenancy?.end_requested_at);
-
-  // Asking is all a tenant can do: ending the tenancy is the landlord's to
-  // approve, so nothing changes here until they do.
-  const handleLeave = () => {
-    if (!myTenancy) return;
-    setIsLeaving(true);
-    const action = endRequested ? cancelEndRequest : requestEndTenancy;
-    action(myTenancy.id)
-      .then(() => {
-        refresh();
-        toast.success(
-          endRequested ? 'Request cancelled' : 'Request sent to your landlord',
-          {
-            description: endRequested
-              ? 'Your tenancy carries on as before.'
-              : 'Your tenancy continues until they approve it.',
-          },
-        );
-      })
-      .catch(err =>
-        toast.error('Could not send that', {
-          description: err instanceof Error ? err.message : 'Please try again.',
-        }),
-      )
-      .finally(() => setIsLeaving(false));
-  };
 
   const handleWithdraw = () => {
     if (!myTenancy) return;
@@ -449,34 +421,16 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
                 </div>
               </div>
 
-              {/* Ending a tenancy takes both sides, so this asks rather than
-                  does. Only shown once there is a real, confirmed tenancy. */}
+              {/* Ending a tenancy takes both sides, whichever side starts it.
+                  Only shown once there is a real, confirmed tenancy. */}
               {myTenancy && !propertyData.isUnconfirmed && (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--hairline)] p-4">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {endRequested ? 'You have asked to end this tenancy' : 'Moving out?'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {endRequested
-                        ? 'Waiting for your landlord to approve. Nothing changes until they do.'
-                        : 'Your landlord has to approve before the tenancy ends.'}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-11 sm:h-8 shrink-0"
-                    disabled={isLeaving}
-                    onClick={handleLeave}
-                  >
-                    {isLeaving
-                      ? 'Working…'
-                      : endRequested
-                        ? 'Cancel request'
-                        : 'Request to leave'}
-                  </Button>
-                </div>
+                <EndNotice
+                  tenancy={myTenancy}
+                  viewerId={userId}
+                  role="tenant"
+                  counterparty="Your landlord"
+                  onChanged={refresh}
+                />
               )}
             </CardContent>
           </Card>

@@ -445,6 +445,40 @@ const main = async () => {
     return r.rows[0];
   });
   check('tenant can reach their own tenancy folder', pathCases.own, true);
+
+  // Property photos are a public-read bucket, so only the write side is
+  // guarded - and it is guarded by exactly this.
+  const photoPaths = await asUser(db, landlordA, async () => {
+    const r = await db.query(
+      `select
+         app.owns_property_path($1) as own,
+         app.owns_property_path($2) as other,
+         app.owns_property_path('properties/not-a-uuid/photo.jpg') as junk,
+         app.owns_property_path('../../etc/passwd')                as traversal,
+         app.owns_property_path($3)                                as bare,
+         app.owns_property_path(null)                              as nul`,
+      [
+        `properties/${propA}/front.jpg`,
+        `properties/${propB}/front.jpg`,
+        `properties/${propA}`,
+      ],
+    );
+    return r.rows[0];
+  });
+  check('a landlord can write under their own property folder', photoPaths.own, true);
+  check("but not under another landlord's", photoPaths.other, false);
+  check('a malformed property uuid is refused, not raised', photoPaths.junk, false);
+  check('a traversal-shaped photo path is refused', photoPaths.traversal, false);
+  check('the folder root itself is not a photo path', photoPaths.bare, false);
+  check('and null is refused', photoPaths.nul, false);
+
+  const tenantPhotoWrite = await asUser(db, tenantA, async () => {
+    const r = await db.query('select app.owns_property_path($1) as ok', [
+      `properties/${propA}/front.jpg`,
+    ]);
+    return r.rows[0].ok;
+  });
+  check('a tenant cannot write photos on the property they rent', tenantPhotoWrite, false);
   check("but not another tenancy's folder", pathCases.other, false);
   check('a malformed uuid is refused, not raised', pathCases.junk, false);
   check('a traversal-shaped path is refused', pathCases.traversal, false);
@@ -504,7 +538,9 @@ const main = async () => {
   );
 
   // --- leaving -------------------------------------------------------------
-  console.log('\nleaving needs both sides:');
+  console.log('\nnotice runs both ways, and needs both sides:');
+
+  const outsider = await createUser(db, 'outsider@example.com', 'Olly Outsider');
 
   checkDenied(
     'a tenant cannot end the tenancy directly',
@@ -514,21 +550,42 @@ const main = async () => {
   );
 
   checkDenied(
-    'a landlord cannot end one that was never requested',
+    'a landlord cannot end one where no notice was given',
     await expectDenied(db, landlordA, () =>
       db.query('select public.approve_end_tenancy($1)', [tenancyA]),
     ),
   );
 
+  checkDenied(
+    'somebody outside the tenancy cannot give notice on it',
+    await expectDenied(db, outsider, () =>
+      db.query('select public.request_end_tenancy($1, $2, $3)', [tenancyA, 'moving_out', '']),
+    ),
+  );
+
   const requested = await asUser(db, tenantA, async () => {
-    await db.query('select public.request_end_tenancy($1)', [tenancyA]);
+    await db.query('select public.request_end_tenancy($1, $2, $3)', [
+      tenancyA, 'moving_out', 'Job is moving to Bengaluru.',
+    ]);
     const r = await db.query(
       'select end_requested_at is not null as asked, status from public.tenancies where id = $1',
       [tenancyA],
     );
     return r.rows[0];
   });
-  check('a tenant can ask to leave, and nothing ends yet', requested, { asked: true, status: 'active' });
+  check('a tenant can give notice, and nothing ends yet', requested, { asked: true, status: 'active' });
+
+  const stored = await asUser(db, landlordA, async () => {
+    const r = await db.query(
+      'select end_reason, end_notes from public.tenancies where id = $1',
+      [tenancyA],
+    );
+    return r.rows[0];
+  });
+  check('the reason and the words reach the other side', stored, {
+    end_reason: 'moving_out',
+    end_notes: 'Job is moving to Bengaluru.',
+  });
 
   checkDenied(
     'an unrelated landlord cannot approve it',
@@ -536,6 +593,35 @@ const main = async () => {
       db.query('select public.approve_end_tenancy($1)', [tenancyA]),
     ),
   );
+
+  checkDenied(
+    'the party who gave notice cannot approve their own',
+    await expectDenied(db, tenantA, () =>
+      db.query('select public.approve_end_tenancy($1)', [tenancyA]),
+    ),
+  );
+
+  checkDenied(
+    'and the party who received it cannot withdraw it',
+    await expectDenied(db, landlordA, () =>
+      db.query('select public.cancel_end_request($1)', [tenancyA]),
+    ),
+  );
+
+  const notOverwritten = await asUser(db, landlordA, async () => {
+    await db.query('select public.request_end_tenancy($1, $2, $3)', [
+      tenancyA, 'rent_arrears', 'Overwritten?',
+    ]);
+    const r = await db.query(
+      'select end_reason, end_requested_by = $2 as by_tenant from public.tenancies where id = $1',
+      [tenancyA, tenantA],
+    );
+    return r.rows[0];
+  });
+  check('notice already given is not rewritten by the other party', notOverwritten, {
+    end_reason: 'moving_out',
+    by_tenant: true,
+  });
 
   const ended = await asUser(db, landlordA, async () => {
     await db.query('select public.approve_end_tenancy($1)', [tenancyA]);
@@ -553,6 +639,64 @@ const main = async () => {
     return r.rows[0].n;
   });
   check('payments survive the tenancy ending', kept > 0, true);
+
+  // The other direction: the landlord gives notice, and the tenant agrees.
+  const propD = await asUser(db, landlordB, async () => {
+    const r = await db.query(
+      `insert into public.properties (landlord_id, title, address_line, city, rent, deposit)
+       values ($1, 'Notice Flat', '7 Church Street', 'Bengaluru', 30000, 60000) returning id`,
+      [landlordB],
+    );
+    return r.rows[0].id;
+  });
+  const codeD = await asUser(db, landlordB, async () => {
+    const r = await db.query('select code from public.current_join_code($1)', [propD]);
+    return r.rows[0].code;
+  });
+  const tenancyD = await asUser(db, outsider, async () => {
+    const r = await db.query('select public.redeem_invite($1) as id', [codeD]);
+    return r.rows[0].id;
+  });
+
+  const landlordNotice = await asUser(db, landlordB, async () => {
+    await db.query('select public.request_end_tenancy($1, $2, $3)', [
+      tenancyD, 'rent_arrears', 'Two months outstanding.',
+    ]);
+    const r = await db.query('select status, end_reason from public.tenancies where id = $1', [tenancyD]);
+    return r.rows[0];
+  });
+  check('a landlord can give notice too, and nothing ends yet', landlordNotice, {
+    status: 'active',
+    end_reason: 'rent_arrears',
+  });
+
+  checkDenied(
+    'the landlord cannot then approve their own notice',
+    await expectDenied(db, landlordB, () =>
+      db.query('select public.approve_end_tenancy($1)', [tenancyD]),
+    ),
+  );
+
+  const withdrawnNotice = await asUser(db, landlordB, async () => {
+    await db.query('select public.cancel_end_request($1)', [tenancyD]);
+    const r = await db.query(
+      'select end_requested_at is null as clear, end_reason from public.tenancies where id = $1',
+      [tenancyD],
+    );
+    return r.rows[0];
+  });
+  check('whoever gave notice can withdraw it', withdrawnNotice, { clear: true, end_reason: '' });
+
+  const endedByTenant = await asUser(db, landlordB, async () => {
+    await db.query('select public.request_end_tenancy($1, $2, $3)', [tenancyD, 'end_of_term', '']);
+    return true;
+  }).then(() => asUser(db, outsider, async () => {
+    await db.query('select public.approve_end_tenancy($1)', [tenancyD]);
+    const r = await db.query('select status from public.tenancies where id = $1', [tenancyD]);
+    return r.rows[0].status;
+  }));
+  check('the tenant agreeing ends it just the same', endedByTenant, 'ended');
+
 
   // --- rotating join codes -------------------------------------------------
   console.log('\nrotating join codes:');

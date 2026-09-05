@@ -82,6 +82,8 @@ interface LandlordDashboardProps {
   properties: Property[];
   /** Tenant-declared tenancies addressed to this landlord. Empty for guests. */
   pendingClaims?: DbTenancy[];
+  /** Set when the portfolio could not be read at all. */
+  loadError?: string | null;
   tenancies?: DbTenancy[];
   /** Re-read after confirming a claim or a payment. */
   refreshTenancy?: () => void;
@@ -103,6 +105,7 @@ export function LandlordDashboard({
   properties,
   pendingClaims = [],
   tenancies = [],
+  loadError = null,
   refreshTenancy = () => {},
   onSignOut,
   onNavigateToPropertyListing,
@@ -268,6 +271,25 @@ export function LandlordDashboard({
           </Button>
         </div>
       </motion.div>
+
+      {/* A failed load used to render as "you haven't added any properties
+          yet", which for a landlord with a portfolio is both alarming and
+          false. Say what actually happened. */}
+      {loadError && (
+        <Card className="border border-destructive/40 shadow-[var(--shadow-sm)]">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div>
+              <p className="font-medium text-destructive">
+                Your properties could not be loaded
+              </p>
+              <p className="text-sm text-muted-foreground">{loadError}</p>
+            </div>
+            <Button variant="outline" className="rounded-full" onClick={refreshTenancy}>
+              Try again
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Things needing the landlord's attention come before the portfolio:
           a tenant waiting to be connected, or money waiting to be acknowledged,

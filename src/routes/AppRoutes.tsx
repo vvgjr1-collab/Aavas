@@ -429,7 +429,7 @@ function LandlordDashboardRoute() {
   const navigate = useNavigate();
   const { properties: demoProperties, updateProperty, deleteProperty, isAuthenticated } =
     useAppState();
-  const { portfolio, pendingClaims, tenancies, refresh } = useTenancy();
+  const { portfolio, pendingClaims, tenancies, refresh, error } = useTenancy();
   const handleSignOut = useSignOut();
   const { userName, userEmail } = useDisplayUser();
   const onBack = useBackToRoleSelection();
@@ -444,6 +444,7 @@ function LandlordDashboardRoute() {
       properties={properties}
       onSignOut={isAuthenticated ? handleSignOut : undefined}
       pendingClaims={isAuthenticated ? pendingClaims : []}
+      loadError={isAuthenticated ? error : null}
       tenancies={isAuthenticated ? tenancies : []}
       refreshTenancy={refresh}
       onNavigateToPropertyListing={() => navigate('/landlord/properties/new')}

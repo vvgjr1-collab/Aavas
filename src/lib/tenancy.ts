@@ -52,6 +52,9 @@ export interface DbTenancy {
   confirmed_at: string | null;
   end_requested_at: string | null;
   end_requested_by: string | null;
+  /** The clause the party giving notice picked, and what they wrote with it. */
+  end_reason: string;
+  end_notes: string;
   ended_at: string | null;
 }
 
@@ -59,7 +62,7 @@ const PROPERTY_COLUMNS =
   'id, landlord_id, title, address_line, city, state, pincode, type, status, rent, deposit, bedrooms, bathrooms, area_sqft, amenities, image_paths, rating';
 
 const TENANCY_COLUMNS =
-  'id, property_id, landlord_id, tenant_id, claimed_address, claimed_landlord_email, source, status, rent, deposit, start_date, end_date, proposed_rent, proposed_deposit, proposed_start_date, proposed_end_date, confirmed_at, end_requested_at, end_requested_by, ended_at';
+  'id, property_id, landlord_id, tenant_id, claimed_address, claimed_landlord_email, source, status, rent, deposit, start_date, end_date, proposed_rent, proposed_deposit, proposed_start_date, proposed_end_date, confirmed_at, end_requested_at, end_requested_by, end_reason, end_notes, ended_at';
 
 /** Postgres messages are for developers; these are the ones a person can act on. */
 function friendly(message: string): string {
@@ -358,9 +361,18 @@ export async function withdrawTenancy(tenancyId: string): Promise<void> {
 }
 
 /** The tenant asks to end an active tenancy. Nothing ends until approved. */
-export async function requestEndTenancy(tenancyId: string): Promise<void> {
+/** Give notice. Either party may; the other one has to agree before it ends. */
+export async function requestEndTenancy(
+  tenancyId: string,
+  reason = '',
+  notes = '',
+): Promise<void> {
   const client = requireSupabase();
-  const { error } = await client.rpc('request_end_tenancy', { p_tenancy_id: tenancyId });
+  const { error } = await client.rpc('request_end_tenancy', {
+    p_tenancy_id: tenancyId,
+    p_reason: reason,
+    p_notes: notes,
+  });
   if (error) fail(error.message);
 }
 
@@ -370,7 +382,7 @@ export async function cancelEndRequest(tenancyId: string): Promise<void> {
   if (error) fail(error.message);
 }
 
-/** The landlord agrees, and the tenancy ends. */
+/** The other party agrees, and the tenancy ends. */
 export async function approveEndTenancy(tenancyId: string): Promise<void> {
   const client = requireSupabase();
   const { error } = await client.rpc('approve_end_tenancy', { p_tenancy_id: tenancyId });
