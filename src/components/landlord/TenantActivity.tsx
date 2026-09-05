@@ -93,6 +93,11 @@ export function TenantActivity({ tenancy }: { tenancy: DbTenancy | null }) {
 
   const openCount = complaints.filter(c => c.status === 'open').length;
 
+  // Listing a property creates a tenancy row before anyone has joined it, so
+  // the row existing is not the same as somebody living there - and "nothing
+  // reported" would read as though a tenant had simply been quiet.
+  const occupied = Boolean(tenancy?.tenant_id);
+
   return (
     <Card className="shadow-[var(--shadow-md)] border border-[#2e3a8c]/25">
       <CardHeader className="pb-3">
@@ -122,14 +127,14 @@ export function TenantActivity({ tenancy }: { tenancy: DbTenancy | null }) {
           no tenant yet had no way to tell whether this existed at all. Say so
           instead.
         */}
-        {!tenancy && (
+        {!occupied && (
           <p className="text-sm text-muted-foreground">
             Nobody has joined this property yet. Complaints and service bookings
             your tenant raises will appear here.
           </p>
         )}
 
-        {tenancy && (
+        {occupied && (
         <>
         <section className="space-y-3">
           <h3 className="text-sm font-semibold" style={{ color: indigo }}>
