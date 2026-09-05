@@ -50,7 +50,62 @@ export function friendlyAuthError(message: string): string {
   if (m.includes('failed to fetch') || m.includes('networkerror')) {
     return 'Could not reach the server. Check your connection and try again.';
   }
+  // PKCE keeps the verifier in the browser that asked, so a link opened
+  // somewhere else cannot be completed. Say which browser to use.
+  if (m.includes('code verifier') || m.includes('code challenge')) {
+    return 'Open the reset link in the same browser you requested it from.';
+  }
+  if (m.includes('expired') || m.includes('invalid') && m.includes('token')) {
+    return 'That reset link has expired. Request a new one.';
+  }
+  if (m.includes('same as the old password') || m.includes('should be different')) {
+    return 'Please choose a password you have not used here before.';
+  }
+  if (m.includes('auth session missing') || m.includes('session_not_found')) {
+    return 'This reset link is no longer valid. Request a new one.';
+  }
   return message;
+}
+
+/**
+ * Where the recovery link comes back to.
+ *
+ * Built from the document URL rather than a constant, so it is right on
+ * GitHub Pages under /Aavas/, on localhost, and inside the Android build.
+ * Supabase appends ?code=... as a query parameter, which lands *before* the
+ * '#' - so HashRouter still routes to /reset-password and the client can find
+ * the code. That ordering is the whole reason this app is on the PKCE flow.
+ */
+export function passwordResetRedirect(): string {
+  return `${window.location.href.split('#')[0]}#/reset-password`;
+}
+
+/**
+ * Send a recovery link.
+ *
+ * Succeeds whether or not the address has an account: telling a stranger which
+ * emails are registered turns this form into a way to enumerate users.
+ */
+export async function sendPasswordReset(email: string): Promise<void> {
+  const client = requireSupabase();
+  const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: passwordResetRedirect(),
+  });
+  if (error) throw new Error(friendlyAuthError(error.message));
+}
+
+/**
+ * Set a new password for whoever the recovery link signed in.
+ *
+ * The link carries a code that only becomes a session once exchanged, which
+ * the client does on load. Without that session this is just an unauthenticated
+ * call and Supabase refuses it - which is what stops a stale tab from changing
+ * somebody's password.
+ */
+export async function updatePassword(password: string): Promise<void> {
+  const client = requireSupabase();
+  const { error } = await client.auth.updateUser({ password });
+  if (error) throw new Error(friendlyAuthError(error.message));
 }
 
 export interface SignUpResult {

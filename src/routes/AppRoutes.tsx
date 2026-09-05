@@ -24,6 +24,7 @@ import { LandlordContact } from '../components/LandlordContact';
 import { LandlordDashboard } from '../components/LandlordDashboard';
 import { PropertyListing } from '../components/PropertyListing';
 import { PropertyManagement } from '../components/PropertyManagement';
+import { ResetPassword } from '../components/auth/ResetPassword';
 
 import { useAppState, useDisplayUser } from '../context/AppState';
 import { TENANT_PROPERTY_ADDRESS } from '../data/properties';
@@ -187,6 +188,21 @@ function SignUpRoute() {
         onBack={() => navigate('/')}
         onGuestLogin={onGuestLogin}
       />
+    </div>
+  );
+}
+
+/**
+ * Deliberately outside every gate: someone arriving here has a recovery
+ * session and no idea what state their account is in, and bouncing them into
+ * onboarding would lose the one thing they came to do.
+ */
+function ResetPasswordRoute() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAppState();
+  return (
+    <div className="mx-auto max-w-md">
+      <ResetPassword onDone={() => navigate(isAuthenticated ? '/role' : '/login', { replace: true })} />
     </div>
   );
 }
@@ -557,6 +573,7 @@ export function AppRoutes() {
       <Route element={<AppLayout />}>
         <Route path="/login" element={<LoginRoute />} />
         <Route path="/signup" element={<SignUpRoute />} />
+        <Route path="/reset-password" element={<ResetPasswordRoute />} />
         <Route path="/role" element={<RoleSelectionRoute />} />
 
         <Route path="/tenant/setup" element={<TenantSetupRoute />} />

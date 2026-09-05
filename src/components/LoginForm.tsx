@@ -10,7 +10,8 @@ import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription } from './ui/alert';
 import logoImage from '../assets/9916df943b90f5078a96ced9635c98fd96bc1655.png';
 import { ArrowLeft } from 'lucide-react';
-import { toast } from 'sonner';
+import { ForgotPasswordDialog } from './auth/ForgotPasswordDialog';
+import { setRememberMe } from '../lib/supabase';
 
 interface LoginFormData {
   email: string;
@@ -30,6 +31,7 @@ export function LoginForm({ onSwitchToSignup, onSubmitCredentials, onBack, onGue
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   const {
     control,
@@ -52,6 +54,9 @@ export function LoginForm({ onSwitchToSignup, onSubmitCredentials, onBack, onGue
     setLoginError('');
 
     try {
+      // Recorded before signing in, so the session is written to the store the
+      // choice implies rather than being moved there afterwards.
+      setRememberMe(data.rememberMe);
       await onSubmitCredentials({ email: data.email, password: data.password });
       // Navigation is the caller's job; on success this form just unmounts.
     } catch (error) {
@@ -221,7 +226,7 @@ export function LoginForm({ onSwitchToSignup, onSubmitCredentials, onBack, onGue
               <button
                 type="button"
                 className="-mx-2 -my-3 rounded-lg px-2 py-3 text-sm text-primary transition-all duration-200 hover:underline"
-                onClick={() => toast.info('Forgot password feature coming soon!')}
+                onClick={() => setForgotOpen(true)}
               >
                 Forgot password?
               </button>
@@ -289,6 +294,12 @@ export function LoginForm({ onSwitchToSignup, onSubmitCredentials, onBack, onGue
           </div>
         </CardContent>
       </Card>
+
+      <ForgotPasswordDialog
+        open={forgotOpen}
+        onOpenChange={setForgotOpen}
+        initialEmail={watchedFields.email}
+      />
     </motion.div>
   );
 }

@@ -30,12 +30,77 @@ if (!isSupabaseConfigured && import.meta.env.DEV) {
   );
 }
 
+/**
+ * "Remember me", meaning something concrete.
+ *
+ * Supabase keeps the session in localStorage, which survives closing the
+ * browser - so the checkbox on the sign-in form did nothing at all: every
+ * sign-in was remembered whether or not it was ticked. Unticked now means
+ * sessionStorage, which the browser drops when the tab closes. That is the
+ * behaviour someone signing in on a shared machine is asking for.
+ */
+const REMEMBER_KEY = 'aavas.remember-me';
+
+/** In-memory fallback: a private window can refuse storage outright. */
+const memory = new Map<string, string>();
+
+function store(kind: 'local' | 'session'): Storage | null {
+  try {
+    const s = kind === 'local' ? window.localStorage : window.sessionStorage;
+    // Touching it is what throws when storage is blocked, not reading it.
+    s.getItem(REMEMBER_KEY);
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+/** Absent means remembered: a session saved before this existed stays signed in. */
+function isRemembered(): boolean {
+  return store('local')?.getItem(REMEMBER_KEY) !== 'false';
+}
+
+/**
+ * Record the choice. Called before signing in, so the session lands in the
+ * right place first time rather than being moved afterwards.
+ */
+export function setRememberMe(remember: boolean): void {
+    const local = store('local');
+    if (!local) return;
+    if (remember) local.removeItem(REMEMBER_KEY);
+    else local.setItem(REMEMBER_KEY, 'false');
+}
+
+/**
+ * Routes the session to whichever store the choice implies, and reads from
+ * both - so an existing remembered session is still found, and a session that
+ * was not remembered is never left behind in localStorage.
+ */
+const rememberAwareStorage = {
+  getItem: (key: string): string | null =>
+    store('session')?.getItem(key) ?? store('local')?.getItem(key) ?? memory.get(key) ?? null,
+  setItem: (key: string, value: string): void => {
+    const remember = isRemembered();
+    const target = store(remember ? 'local' : 'session');
+    const other = store(remember ? 'session' : 'local');
+    other?.removeItem(key);
+    if (target) target.setItem(key, value);
+    else memory.set(key, value);
+  },
+  removeItem: (key: string): void => {
+    store('local')?.removeItem(key);
+    store('session')?.removeItem(key);
+    memory.delete(key);
+  },
+};
+
 export const supabase = isSupabaseConfigured
   ? createClient(url as string, anonKey as string, {
       auth: {
         // Keep the session across reloads and refresh it in the background;
         // this is what makes an account survive closing the app.
         persistSession: true,
+        storage: rememberAwareStorage,
         autoRefreshToken: true,
         detectSessionInUrl: true,
         // PKCE, specifically because this app uses a HashRouter.
