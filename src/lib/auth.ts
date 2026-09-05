@@ -169,6 +169,20 @@ export async function ensureProfile(user: User): Promise<Profile | null> {
   return data as Profile;
 }
 
+/**
+ * Rebuild the signed-in user's profile row, for a write that has just failed
+ * because it was missing.
+ *
+ * Reads the user from the client rather than taking one, so a caller deep in
+ * the data layer does not have to thread the session through to reach it.
+ */
+export async function repairProfile(): Promise<boolean> {
+  if (!supabase) return false;
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) return false;
+  return Boolean(await ensureProfile(data.user));
+}
+
 export async function updateProfile(
   userId: string,
   changes: Partial<Pick<Profile, 'full_name' | 'phone' | 'active_role' | 'onboarding'>>,

@@ -73,11 +73,47 @@ function friendly(message: string): string {
   if (m.includes('violates row-level security')) {
     return 'You do not have permission to do that.';
   }
+  if (m.includes('violates foreign key constraint') && m.includes('landlord_id')) {
+    return 'Your account is not fully set up yet. Sign out and back in, then try again.';
+  }
   return message;
 }
 
 function fail(message: string): never {
   throw new Error(friendly(message));
+}
+
+/** Postgres's foreign key violation. */
+const FOREIGN_KEY_VIOLATION = '23503';
+
+/**
+ * Run a write, rebuilding the caller's profile row if that was what was
+ * missing.
+ *
+ * Every row in the app hangs off profiles, so a profile that has gone away
+ * surfaces as an unreadable foreign key error on whatever the person happened
+ * to be doing - "violates foreign key constraint properties_landlord_id_fkey"
+ * on the screen where they are adding their first property. The trigger that
+ * creates a profile only fires at signup, so there is otherwise no way back:
+ * the account is permanently unable to write anything. Rebuild it and try once
+ * more instead.
+ */
+async function writeRepairingProfile<T>(
+  run: () => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>,
+): Promise<T> {
+  let { data, error } = await run();
+  // Matched on the message as well as the code: the message is the thing we
+  // have actually seen on screen, and a retry here costs nothing.
+  const missingProfile =
+    error != null &&
+    (error.code === FOREIGN_KEY_VIOLATION ||
+      /violates foreign key constraint/i.test(error.message));
+  if (missingProfile) {
+    const { repairProfile } = await import('./auth');
+    if (await repairProfile()) ({ data, error } = await run());
+  }
+  if (error) fail(error.message);
+  return data as T;
 }
 
 export async function listMyProperties(): Promise<DbProperty[]> {
@@ -121,7 +157,8 @@ export async function createProperty(
   input: NewPropertyInput,
 ): Promise<DbProperty> {
   const client = requireSupabase();
-  const { data, error } = await client
+  return writeRepairingProfile<DbProperty>(() =>
+    client
     .from('properties')
     .insert({
       landlord_id: landlordId,
@@ -139,9 +176,8 @@ export async function createProperty(
       amenities: input.amenities ?? [],
     })
     .select(PROPERTY_COLUMNS)
-    .single();
-  if (error) fail(error.message);
-  return data as DbProperty;
+      .single(),
+  );
 }
 
 export async function updateProperty(
@@ -260,7 +296,8 @@ export async function createTenancyClaim(
   input: TenancyClaimInput,
 ): Promise<DbTenancy> {
   const client = requireSupabase();
-  const { data, error } = await client
+  return writeRepairingProfile<DbTenancy>(() =>
+    client
     .from('tenancies')
     .insert({
       tenant_id: tenantId,
@@ -275,9 +312,8 @@ export async function createTenancyClaim(
       proposed_end_date: input.proposed_end_date,
     })
     .select(TENANCY_COLUMNS)
-    .single();
-  if (error) fail(error.message);
-  return data as DbTenancy;
+      .single(),
+  );
 }
 
 /** Landlord side of the tenant-first path: claims addressed to my email. */
