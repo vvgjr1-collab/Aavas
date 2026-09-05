@@ -68,8 +68,6 @@ export function TenantActivity({ tenancy }: { tenancy: DbTenancy | null }) {
 
   useEffect(load, [load]);
 
-  if (!tenancy) return null;
-
   const setStatus = (complaint: DbComplaint, status: string) => {
     if (!supabase) return;
     setBusyId(complaint.id);
@@ -119,6 +117,20 @@ export function TenantActivity({ tenancy }: { tenancy: DbTenancy | null }) {
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/*
+          Returning null here used to remove the whole card, so a landlord with
+          no tenant yet had no way to tell whether this existed at all. Say so
+          instead.
+        */}
+        {!tenancy && (
+          <p className="text-sm text-muted-foreground">
+            Nobody has joined this property yet. Complaints and service bookings
+            your tenant raises will appear here.
+          </p>
+        )}
+
+        {tenancy && (
+        <>
         <section className="space-y-3">
           <h3 className="text-sm font-semibold" style={{ color: indigo }}>
             Complaints
@@ -127,7 +139,7 @@ export function TenantActivity({ tenancy }: { tenancy: DbTenancy | null }) {
           {loading && complaints.length === 0 ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : complaints.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nothing reported. </p>
+            <p className="text-sm text-muted-foreground">Nothing reported.</p>
           ) : (
             <ul className="space-y-3">
               {complaints.map(c => {
@@ -231,6 +243,8 @@ export function TenantActivity({ tenancy }: { tenancy: DbTenancy | null }) {
             </ul>
           )}
         </section>
+        </>
+        )}
       </CardContent>
     </Card>
   );
