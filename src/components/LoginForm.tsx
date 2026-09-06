@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import logoImage from '../assets/9916df943b90f5078a96ced9635c98fd96bc1655.png';
 import { ArrowLeft } from 'lucide-react';
 import { ForgotPasswordDialog } from './auth/ForgotPasswordDialog';
-import { setRememberMe } from '../lib/supabase';
+import { getRememberMe, setRememberMe } from '../lib/supabase';
 
 interface LoginFormData {
   email: string;
@@ -43,7 +43,9 @@ export function LoginForm({ onSwitchToSignup, onSubmitCredentials, onBack, onGue
     defaultValues: {
       email: '',
       password: '',
-      rememberMe: false,
+      // Ticked unless this browser has been told otherwise, so the box shows
+      // what will actually happen rather than resetting the choice each visit.
+      rememberMe: getRememberMe(),
     },
   });
 

@@ -55,9 +55,19 @@ function store(kind: 'local' | 'session'): Storage | null {
   }
 }
 
-/** Absent means remembered: a session saved before this existed stays signed in. */
-function isRemembered(): boolean {
+/**
+ * Absent means remembered.
+ *
+ * Staying signed in is what someone expects from a phone or their own laptop,
+ * and it is what this app did before the checkbox was wired to anything.
+ * Unticking is the deliberate act, for a machine that is not yours.
+ */
+export function getRememberMe(): boolean {
   return store('local')?.getItem(REMEMBER_KEY) !== 'false';
+}
+
+function isRemembered(): boolean {
+  return getRememberMe();
 }
 
 /**

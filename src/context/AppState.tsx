@@ -13,7 +13,7 @@ import type { Property } from '../types/property';
 import type { ServiceProvider } from '../types/service';
 import type { PropertyFormData } from '../components/PropertyListing';
 import { initialProperties } from '../data/properties';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, setRememberMe } from '../lib/supabase';
 import {
   displayNameFor,
   ensureProfile,
@@ -132,7 +132,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [session?.user?.id]);
 
   const signUp = useCallback(
-    (input: { name: string; email: string; password: string }) => signUpWithEmail(input),
+    (input: { name: string; email: string; password: string }) => {
+      // A new account starts remembered. Without this it would inherit a
+      // "false" left behind by someone who signed in here once without
+      // ticking the box, and be quietly signed out when the browser closed.
+      setRememberMe(true);
+      return signUpWithEmail(input);
+    },
     [],
   );
 
