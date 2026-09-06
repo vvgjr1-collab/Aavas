@@ -271,6 +271,126 @@ html {
   .border {
     page-break-inside: avoid;
   }
+
+  /* ------------------------------------------------------------------
+     Printing one dialog, rather than a photograph of the screen.
+
+     window.print() prints the whole document, so the report came out as
+     the dashboard behind it, the dimmed overlay on top, and the dialog
+     clipped to one viewport - a screenshot, page after page. Three
+     things cause that, and all three have to be undone: everything else
+     on the page, the fixed centring and transform that put the dialog
+     over the app, and the scroll area that shows one screenful at a
+     time.
+
+     Scoped to html.printing so none of it applies to an ordinary
+     Ctrl-P of a normal screen.
+     ------------------------------------------------------------------ */
+
+  html.printing body > *:not(.printing-root) {
+    display: none !important;
+  }
+
+  html.printing .printing-root {
+    display: block !important;
+    position: static !important;
+  }
+
+  html.printing [data-slot='dialog-overlay'] {
+    display: none !important;
+  }
+
+  html.printing [data-slot='dialog-content'] {
+    position: static !important;
+    /* Tailwind v4 centres the dialog with the standalone `translate`
+       property, which `transform: none` does not touch - that is what put
+       the report half a page to the left. Overriding `translate` directly is
+       not enough either: the CSS minifier folds a lone `translate: none`
+       into `transform` and the declaration disappears from the bundle. So
+       zero the variables the utility is built from, which nothing can fold
+       away, and keep the two shorthand resets as well. */
+    --tw-translate-x: 0 !important;
+    --tw-translate-y: 0 !important;
+    --tw-translate-z: 0 !important;
+    transform: none !important;
+    translate: none !important;
+    inset: auto !important;
+    margin: 0 !important;
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  html.printing .printing-root,
+  html.printing [data-slot='dialog-content'],
+  html.printing [data-print-region] {
+    width: 100% !important;
+    --tw-translate-x: 0 !important;
+    --tw-translate-y: 0 !important;
+    translate: none !important;
+    transform: none !important;
+  }
+
+  /* The scroll area, and the fixed-height column it sits in, both clip. */
+  html.printing .printing-root [data-slot='scroll-area'],
+  html.printing .printing-root [data-slot='scroll-area-viewport'],
+  html.printing .printing-root [data-print-region],
+  html.printing .printing-root [data-print-region] * {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  html.printing .printing-root [data-slot='scroll-area-viewport'],
+  html.printing .printing-root [data-print-column] {
+    height: auto !important;
+  }
+
+  html.printing [data-slot='scroll-area-scrollbar'] {
+    display: none !important;
+  }
+
+  /* A row split across a page break is unreadable in a document someone
+     is going to hand to a tenant. */
+  html.printing [data-print-region] section,
+  html.printing [data-print-region] tr,
+  html.printing [data-print-region] li,
+  html.printing [data-print-region] > div > div {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  html.printing [data-print-region] h1,
+  html.printing [data-print-region] h2,
+  html.printing [data-print-region] h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Ink, not screen: the dark card backgrounds cost a page of toner and
+     read worse on paper. */
+  html.printing [data-print-region] {
+    color: #111 !important;
+    background: #fff !important;
+  }
+
+  html.printing [data-print-region] table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  html.printing [data-print-region] th,
+  html.printing [data-print-region] td {
+    border-bottom: 1px solid #d4d4d8 !important;
+    padding: 6px 8px !important;
+  }
 }
 /* ==========================================================================
    Aavas design system - Apple-like surface, type and motion layer.

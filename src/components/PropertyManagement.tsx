@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   ArrowLeft,
@@ -95,6 +95,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
   const [newMessage, setNewMessage] = useState('');
 
   // The tenant is whoever joined this lease, read from their own profile.
@@ -149,7 +150,41 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
     }
   };
 
+  /**
+   * Print the report, and only the report.
+   *
+   * window.print() prints the document, which is why this used to come out
+   * as a picture of the screen: the dashboard behind the dialog, the dimmed
+   * overlay over it, and the report clipped to whatever fitted in the scroll
+   * area. The stylesheet can undo all of that, but only if it can tell which
+   * part of the page to keep - and the dialog lives in a portal whose wrapper
+   * this component never sees. So walk up from the report to the element that
+   * sits directly under <body> and mark that.
+   */
   const handlePrintReport = () => {
+    const node = reportRef.current;
+    if (!node) {
+      window.print();
+      return;
+    }
+
+    let root: HTMLElement = node;
+    while (root.parentElement && root.parentElement !== document.body) {
+      root = root.parentElement;
+    }
+
+    root.classList.add('printing-root');
+    document.documentElement.classList.add('printing');
+
+    const restore = () => {
+      root.classList.remove('printing-root');
+      document.documentElement.classList.remove('printing');
+    };
+    // afterprint covers both printing and cancelling; the timeout is for the
+    // browsers that never fire it.
+    window.addEventListener('afterprint', restore, { once: true });
+    window.setTimeout(restore, 60000);
+
     window.print();
   };
 
@@ -609,7 +644,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
       {/* Report Dialog */}
       <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0 gap-0" hideCloseButton>
-          <div className="flex flex-col h-[80vh]">
+          <div data-print-column className="flex flex-col h-[80vh]">
             {/* Report Header - Not Printed */}
             <div className="print:hidden px-6 py-4 border-b bg-gradient-to-r from-[#2e3a8c] to-[#4a5bb0] shrink-0">
               <div className="flex items-center justify-between">
@@ -635,7 +670,7 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
 
             {/* Report Content - Scrollable */}
             <ScrollArea className="flex-1 min-h-0">
-              <div className="space-y-6 print:space-y-4 px-6 py-6">
+              <div ref={reportRef} data-print-region className="space-y-6 print:space-y-4 px-6 py-6">
                 {/* Report Header - For Print */}
                 <div className="hidden print:block mb-6">
                   <div className="text-center border-b-2 border-[#2e3a8c] pb-4">
@@ -844,40 +879,21 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
                   </p>
                 </div>
 
-                {/* General Comments */}
+                {/* The four invented chat messages that used to be printed
+                    here described a plumber visit last October that never
+                    happened. There is no messaging backend yet, and a report a
+                    landlord might hand to a tenant is the last place to
+                    fabricate a conversation. */}
                 <Separator />
                 <div>
                   <h3 className="text-[#2e3a8c] dark:text-[#4a5bb0] mb-3 flex items-center">
                     <MessageSquare className="w-5 h-5 mr-2" />
                     Recent Communication
                   </h3>
-                  <div className="border border-[#2e3a8c]/30 rounded-lg p-4 space-y-3">
-                    {messages.slice(-3).map((message) => (
-                      <div 
-                        key={message.id}
-                        className={`p-3 rounded-lg ${
-                          message.sender === 'landlord'
-                            ? 'bg-[#2e3a8c]/10 dark:bg-[#2e3a8c]/20 ml-8'
-                            : 'bg-gray-100 dark:bg-gray-800 mr-8'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-sm">
-                            {message.sender === 'landlord' ? 'Landlord' : 'Tenant'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {message.date} at {message.timestamp}
-                          </p>
-                        </div>
-                        <p className="text-sm">{message.text}</p>
-                      </div>
-                    ))}
-                    {messages.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        No recent communication
-                      </p>
-                    )}
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Messages between you and your tenant are not recorded yet, so
+                    this report carries none.
+                  </p>
                 </div>
 
                 {/* Report Footer */}
