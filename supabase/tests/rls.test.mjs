@@ -133,6 +133,47 @@ const main = async () => {
     ),
   );
 
+  // --- whose portfolio is it -----------------------------------------------
+  console.log('\nreadable is not the same as owned:');
+
+  // The policy deliberately lets a tenant read the property they rent - their
+  // own dashboard has to show the address. So an unfiltered select is not a
+  // portfolio, and the app must not treat it as one.
+  const tenantSees = await asUser(db, tenantA, async () => {
+    const all = await db.query('select id from public.properties');
+    const owned = await db.query('select id from public.properties where landlord_id = $1', [tenantA]);
+    return { readable: all.rows.length, owned: owned.rows.length };
+  });
+  check('a tenant can read the property they rent', tenantSees.readable, 1);
+  check('but owns none of it, which is what the portfolio must ask', tenantSees.owned, 0);
+
+  const landlordSees = await asUser(db, landlordA, async () => {
+    const r = await db.query('select id from public.properties where landlord_id = $1', [landlordA]);
+    return r.rows.length;
+  });
+  check('and the same question still answers the landlord', landlordSees, 1);
+
+  checkDenied(
+    'a tenant still cannot edit the property they rent',
+    await expectDenied(db, tenantA, async () => {
+      const r = await db.query(
+        "update public.properties set title = 'Mine now' where id = $1 returning id",
+        [propA],
+      );
+      if (r.rows.length === 0) throw new Error('no rows updated (RLS filtered them)');
+      return r;
+    }),
+  );
+
+  checkDenied(
+    'nor delete it',
+    await expectDenied(db, tenantA, async () => {
+      const r = await db.query('delete from public.properties where id = $1 returning id', [propA]);
+      if (r.rows.length === 0) throw new Error('no rows deleted (RLS filtered them)');
+      return r;
+    }),
+  );
+
   // --- the landlord's number wins ------------------------------------------
   console.log("\nthe landlord's figures are authoritative:");
 

@@ -78,13 +78,13 @@ interface PropertyManagementProps {
 }
 
 export function PropertyManagement({ property, onBack }: PropertyManagementProps) {
-  const { tenancies, properties, refresh } = useTenancy();
+  const { landlordTenancies, properties, refresh } = useTenancy();
   const { userId } = useAppState();
   // The row behind the display shape, for the editor to write back to.
   const dbProperty = properties.find(p => p.id === property.id) ?? null;
   // The live tenancy for this property, if there is one.
   const tenancy =
-    tenancies.find(
+    landlordTenancies.find(
       t => t.property_id === property.id && (t.status === 'active' || t.status === 'pending'),
     ) ?? null;
 

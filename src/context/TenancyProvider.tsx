@@ -28,6 +28,8 @@ interface TenancyContextValue {
   ready: boolean;
   properties: DbProperty[];
   tenancies: DbTenancy[];
+  /** Only those where this account is the landlord. */
+  landlordTenancies: DbTenancy[];
   /** The tenancy where the signed-in account is the tenant. */
   myTenancy: DbTenancy | null;
   /** Dashboard-shaped view of myTenancy, or the demo flat for guests. */
@@ -109,7 +111,7 @@ export function TenancyProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
 
-    Promise.all([listMyProperties(), listMyTenancies(), listPendingClaims()])
+    Promise.all([listMyProperties(userId), listMyTenancies(), listPendingClaims()])
       .then(async ([props, tens, claims]) => {
         if (!active) return;
         setProperties(props);
@@ -137,6 +139,20 @@ export function TenancyProvider({ children }: { children: ReactNode }) {
   // property also has a tenant, and must not be read as one they rent.
   const myTenancy = useMemo(
     () => tenancies.find(t => t.tenant_id === userId && isLiveTenancy(t)) ?? null,
+    [tenancies, userId],
+  );
+
+  /**
+   * The tenancies this person is the *landlord* of.
+   *
+   * listMyTenancies returns both sides, because one account can be a landlord
+   * on one property and a tenant on another. Every landlord-side panel has to
+   * narrow to this - otherwise a tenant who switches role is shown their own
+   * lease with "Confirm receipt" and "Agree and end the tenancy" on it,
+   * offering them both halves of an agreement that needs two people.
+   */
+  const landlordTenancies = useMemo(
+    () => tenancies.filter(t => t.landlord_id === userId),
     [tenancies, userId],
   );
 
@@ -180,6 +196,7 @@ export function TenancyProvider({ children }: { children: ReactNode }) {
       ready: demo ? true : loaded && viewReady,
       properties,
       tenancies,
+      landlordTenancies,
       myTenancy,
       view,
       portfolio,
@@ -189,7 +206,7 @@ export function TenancyProvider({ children }: { children: ReactNode }) {
       error,
       refresh,
     }),
-    [demo, loaded, loading, viewReady, properties, tenancies, myTenancy, view, portfolio, pendingClaims, answerable, error, refresh],
+    [demo, loaded, loading, viewReady, properties, tenancies, landlordTenancies, myTenancy, view, portfolio, pendingClaims, answerable, error, refresh],
   );
 
   return <TenancyContext.Provider value={value}>{children}</TenancyContext.Provider>;

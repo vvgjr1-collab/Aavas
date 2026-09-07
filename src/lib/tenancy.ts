@@ -119,11 +119,25 @@ async function writeRepairingProfile<T>(
   return data as T;
 }
 
-export async function listMyProperties(): Promise<DbProperty[]> {
-  if (!supabase) return [];
+/**
+ * The properties this person owns.
+ *
+ * The landlord filter is not redundant with Row Level Security, and leaving it
+ * out was a real bug. The policy lets a tenant read the property they rent -
+ * it has to, or their own dashboard could not show the address - so an
+ * unfiltered select answers "what may I read", and the portfolio was rendering
+ * that as "what I own". A tenant who switched to the landlord view found their
+ * own home sitting there with Manage and Delete on it.
+ *
+ * Security decides what is readable. Ownership decides whose portfolio it is,
+ * and that is this query's job to ask.
+ */
+export async function listMyProperties(landlordId: string | null): Promise<DbProperty[]> {
+  if (!supabase || !landlordId) return [];
   const { data, error } = await supabase
     .from('properties')
     .select(PROPERTY_COLUMNS)
+    .eq('landlord_id', landlordId)
     .order('created_at', { ascending: true });
   if (error) fail(error.message);
   return (data ?? []) as DbProperty[];
