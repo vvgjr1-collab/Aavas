@@ -13,6 +13,16 @@ import { supabase } from '../../lib/supabase';
 const MIN_LENGTH = 8;
 
 /**
+ * The same rule the sign-up form applies.
+ *
+ * They were different, which meant a password reset was a way to end up with a
+ * weaker password than the account could have been created with. Supabase's
+ * own minimum is six characters with no complexity at all, so this is the only
+ * thing standing between a person and "password".
+ */
+const STRONG = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+
+/**
  * The other end of a recovery email.
  *
  * The link comes back with ?code=... in the query string, which the client
@@ -83,6 +93,10 @@ export function ResetPassword({ onDone }: { onDone: () => void }) {
     setError('');
     if (password.length < MIN_LENGTH) {
       setError(`Use at least ${MIN_LENGTH} characters.`);
+      return;
+    }
+    if (!STRONG.test(password)) {
+      setError('Include an uppercase letter, a lowercase letter and a number.');
       return;
     }
     if (password !== confirm) {
@@ -171,7 +185,8 @@ export function ResetPassword({ onDone }: { onDone: () => void }) {
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  At least {MIN_LENGTH} characters.
+                  At least {MIN_LENGTH} characters, with an uppercase letter, a
+                  lowercase letter and a number.
                 </p>
               </div>
 
