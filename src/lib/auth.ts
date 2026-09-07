@@ -21,8 +21,11 @@ export interface Profile {
  * Redirect URLs in the dashboard, or Supabase refuses to redirect there.
  */
 export function emailRedirectTo(): string {
-  const { origin, pathname } = window.location;
-  return `${origin}${pathname}`;
+  // Into the app, not onto the marketing page. Confirming an address already
+  // signs the person in - landing them on "Get started" made that invisible
+  // and asked them to do it again. As with recovery, Supabase appends ?code=
+  // before the '#', where HashRouter ignores it.
+  return `${window.location.href.split('#')[0]}#/welcome`;
 }
 
 /**

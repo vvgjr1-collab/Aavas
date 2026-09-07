@@ -104,6 +104,18 @@ const rememberAwareStorage = {
   },
 };
 
+/**
+ * Whether this page load arrived carrying an auth code.
+ *
+ * Read at module load, before the client is created: with detectSessionInUrl
+ * on, supabase-js strips the code from the URL as soon as it has exchanged it,
+ * so anything asking later finds nothing. Confirmation emails sent before the
+ * link pointed into the app still land on the homepage, and this is how that
+ * arrival is recognised.
+ */
+const initialQuery = typeof window === 'undefined' ? '' : window.location.search;
+export const arrivedWithAuthCode = /[?&](code|error_description|error)=/.test(initialQuery);
+
 export const supabase = isSupabaseConfigured
   ? createClient(url as string, anonKey as string, {
       auth: {

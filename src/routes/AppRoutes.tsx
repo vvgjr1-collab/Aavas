@@ -8,9 +8,10 @@ import {
   useParams,
   useSearchParams,
 } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 
+import { arrivedWithAuthCode } from '../lib/supabase';
 import { HomePage } from '../components/HomePage';
 import { LoginForm } from '../components/LoginForm';
 import { SignUpForm } from '../components/SignUpForm';
@@ -25,6 +26,7 @@ import { LandlordDashboard } from '../components/LandlordDashboard';
 import { PropertyListing } from '../components/PropertyListing';
 import { PropertyManagement } from '../components/PropertyManagement';
 import { ResetPassword } from '../components/auth/ResetPassword';
+import { EmailConfirmed } from '../components/auth/EmailConfirmed';
 import { PrivacyPolicy } from '../components/legal/PrivacyPolicy';
 import { Terms } from '../components/legal/Terms';
 
@@ -141,6 +143,27 @@ function HomeRoute() {
         onOpenLegal={page => navigate(`/${page}`)}
       />
     </PageTransition>
+  );
+}
+
+/**
+ * Where a confirmation link lands. Sends people on by the role they already
+ * chose, so a returning account does not stop at a menu it has answered.
+ */
+function WelcomeRoute() {
+  const navigate = useNavigate();
+  const { role } = useAppState();
+  return (
+    <div className="mx-auto max-w-md">
+      <EmailConfirmed
+        onContinue={() =>
+          navigate(role ? (role === 'tenant' ? '/tenant' : '/landlord') : '/role', {
+            replace: true,
+          })
+        }
+        onSignIn={() => navigate('/login', { replace: true })}
+      />
+    </div>
   );
 }
 
@@ -579,6 +602,19 @@ function PropertyManagementRoute() {
 
 export function AppRoutes() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Confirmation emails sent before the link pointed into the app come back to
+  // the homepage carrying a code. The session is established either way; this
+  // is only about not leaving somebody who has just confirmed staring at
+  // "Create Free Account".
+  useEffect(() => {
+    if (!arrivedWithAuthCode) return;
+    const route = window.location.hash.replace(/^#/, '');
+    if (route === '' || route === '/') navigate('/welcome', { replace: true });
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Keying <Routes> by pathname makes each screen a presence child: the old
   // tree stays mounted (still rendering the old location) while it animates
@@ -594,6 +630,7 @@ export function AppRoutes() {
         <Route path="/login" element={<LoginRoute />} />
         <Route path="/signup" element={<SignUpRoute />} />
         <Route path="/reset-password" element={<ResetPasswordRoute />} />
+        <Route path="/welcome" element={<WelcomeRoute />} />
         <Route path="/role" element={<RoleSelectionRoute />} />
 
         <Route path="/tenant/setup" element={<TenantSetupRoute />} />
