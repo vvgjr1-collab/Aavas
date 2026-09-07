@@ -18,6 +18,7 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { useTenancy } from '../context/TenancyProvider';
+import { DocumentsPanel } from './documents/DocumentsPanel';
 import { useAppState } from '../context/AppState';
 import { listPayments, type DbPayment } from '../lib/records';
 
@@ -598,6 +599,16 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
           >
+            {/* The signed agreement had nowhere to live until now: the app
+                generated a template and had no way to hold the real one. */}
+            <div className="mb-6">
+              <DocumentsPanel
+                tenancyId={myTenancy?.id ?? null}
+                userId={userId}
+                title="Your documents"
+                description="Upload the signed agreement, police verification or anything else you both need a copy of."
+              />
+            </div>
           <div className="space-y-6">
             {/* Rent Agreement Section */}
             <Card className="shadow-[var(--shadow-md)] border" style={{ borderColor: 'color-mix(in srgb, var(--tenant-primary) 22%, transparent)' }}>

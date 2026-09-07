@@ -27,6 +27,7 @@ import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Conversation } from './chat/Conversation';
 import { toast } from 'sonner';
 
 interface LandlordContactProps {
@@ -34,6 +35,10 @@ interface LandlordContactProps {
   userEmail: string;
   propertyAddress: string;
   initialTab?: 'call' | 'message' | 'history';
+  /** The thread this screen writes to. Null for a guest, or before joining. */
+  tenancyId: string | null;
+  viewerId: string | null;
+  landlordName: string;
   onBack: () => void;
 }
 
@@ -46,7 +51,7 @@ interface ContactHistory {
   status: 'completed' | 'missed' | 'sent' | 'delivered' | 'read';
 }
 
-export function LandlordContact({ userName, userEmail, propertyAddress, initialTab, onBack }: LandlordContactProps) {
+export function LandlordContact({ userName, userEmail, propertyAddress, initialTab, tenancyId, viewerId, landlordName, onBack }: LandlordContactProps) {
   const [activeTab, setActiveTab] = useState<'call' | 'message' | 'history'>(initialTab || 'call');
   const [textMessage, setTextMessage] = useState<string>('');
   const [isCallActive, setIsCallActive] = useState<boolean>(false);
@@ -226,7 +231,7 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
         </div>
       </motion.div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-2 gap-6">
         {/* Main Contact Interface */}
         <div className="lg:col-span-2 space-y-6">
           {/* Contact Method Tabs */}
@@ -343,153 +348,19 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
 
                 {/* Text Interface */}
                 <TabsContent value="message">
-                  <div className="space-y-4">
-                    {/* Quick Message Templates */}
-                    <div>
-                      <Label className="text-sm mb-3 block" style={{ color: 'var(--tenant-primary)' }}>
-                        Quick Messages
-                      </Label>
-                      <div className="grid grid-cols-1 gap-2">
-                        {quickMessages.map((message, index) => (
-                          <Button
-                            key={index}
-                            variant="ghost"
-                            className="justify-start text-left h-auto p-3 text-sm border"
-                            style={{ borderColor: 'var(--tenant-primary)' }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(74, 189, 172, 0.1)'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                            onClick={() => handleQuickMessage(message)}
-                          >
-                            {message}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Custom Message */}
-                    <div className="space-y-3">
-                      <Label htmlFor="message">Custom Message</Label>
-                      <Textarea
-                        id="message"
-                        placeholder="Type your message here..."
-                        value={textMessage}
-                        onChange={(e) => setTextMessage(e.target.value)}
-                        className="min-h-[120px]"
-                      />
-                      <div className="flex items-center justify-between">
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm">
-                            aria-label="Attach a file"
-                            <Paperclip className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            aria-label="Attach an image"
-                            <Image className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            aria-label="Record a voice message"
-                            <Mic className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <Button
-                          onClick={() => handleSendMessage(textMessage)}
-                          disabled={!textMessage.trim() || isSendingMessage}
-                          className="text-white"
-                          style={{ backgroundColor: 'var(--tenant-primary)' }}
-                          onMouseEnter={(e) => {
-                            if (!e.currentTarget.disabled) {
-                              e.currentTarget.style.backgroundColor = 'var(--tenant-primary-dark)';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!e.currentTarget.disabled) {
-                              e.currentTarget.style.backgroundColor = 'var(--tenant-primary)';
-                            }
-                          }}
-                        >
-                          {isSendingMessage ? (
-                            <Clock className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Send className="w-4 h-4 mr-2" />
-                          )}
-                          Send
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {textMessage.length}/500 characters
-                      </p>
-                    </div>
-                  </div>
-
-                </TabsContent>
-
-                {/* History Interface */}
-                <TabsContent value="history">
-                  <div className="space-y-4">
-                    <div className="text-sm text-muted-foreground mb-4">
-                      Recent communication history with {landlordData.name}
-                    </div>
-                    {contactHistory.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>No contact history yet</p>
-                        <p className="text-sm">Start by calling or sending a message</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {contactHistory.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-start space-x-3 p-4 rounded-lg border"
-                            style={{ backgroundColor: 'rgba(74, 189, 172, 0.05)', borderColor: 'var(--tenant-primary)' }}
-                          >
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: item.type === 'call' ? 'var(--tenant-success)' : 'var(--tenant-primary)' }}>
-                              {item.type === 'call' ? (
-                                <Phone className="w-4 h-4 text-white" />
-                              ) : (
-                                <MessageSquare className="w-4 h-4 text-white" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between mb-1">
-                                <p className="text-sm" style={{ color: 'var(--tenant-primary)' }}>
-                                  {item.type === 'call' ? 'Phone Call' : 'Text Message'}
-                                </p>
-                                <div className="flex items-center space-x-2">
-                                  {item.status === 'completed' && (
-                                    <CheckCircle className="w-4 h-4" style={{ color: 'var(--tenant-success)' }} />
-                                  )}
-                                  {item.status === 'delivered' && (
-                                    <CheckCircle className="w-4 h-4" style={{ color: 'var(--tenant-primary)' }} />
-                                  )}
-                                  {item.status === 'read' && (
-                                    <div className="flex">
-                                      <CheckCircle className="w-4 h-4" style={{ color: 'var(--tenant-primary)' }} />
-                                      <CheckCircle className="w-4 h-4 -ml-1" style={{ color: 'var(--tenant-primary)' }} />
-                                    </div>
-                                  )}
-                                  <span className="text-xs text-muted-foreground">
-                                    {item.timestamp}
-                                  </span>
-                                </div>
-                              </div>
-                              {item.message && (
-                                <p className="text-sm text-muted-foreground mb-2">
-                                  "{item.message}"
-                                </p>
-                              )}
-                              {item.duration && (
-                                <p className="text-xs" style={{ color: 'var(--tenant-success-dark)' }}>
-                                  Duration: {item.duration}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                  {/* The same thread the landlord sees on the property page. */}
+                  <div className="flex min-h-[22rem] flex-col">
+                    <Conversation
+                      tenancyId={tenancyId}
+                      viewerId={viewerId}
+                      counterparty={landlordName}
+                      disabled={
+                        tenancyId
+                          ? undefined
+                          : 'Join a tenancy first, and this becomes a line to your landlord.'
+                      }
+                      emptyHint="No messages yet. Anything you send appears on your landlord's dashboard."
+                    />
                   </div>
                 </TabsContent>
               </CardContent>

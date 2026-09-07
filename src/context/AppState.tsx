@@ -37,6 +37,9 @@ interface AppState {
   /** The Supabase auth id, or null for guests. Rows are keyed by this. */
   userId: string | null;
   role: UserRole | null;
+  /** The caller's own profile row, or null before it loads. */
+  profile: Profile | null;
+  saveProfile: (changes: { full_name: string; phone: string }) => Promise<void>;
   /** True until the stored session has been checked, so guards do not flash. */
   isLoadingSession: boolean;
   /** A guest is a local demo user with no account and no database access. */
@@ -227,9 +230,28 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const role = session?.user ? (profile?.active_role ?? guestRole) : guestRole;
 
+  /**
+   * Save the fields a person owns on their own profile.
+   *
+   * Optimistic, because the account screen has just shown them their own
+   * typing and blanking it back while a round trip finishes reads as a
+   * failure. A real failure throws and the caller says so.
+   */
+  const saveProfile = useCallback(
+    async (changes: { full_name: string; phone: string }) => {
+      const userId = session?.user?.id;
+      if (!userId) return;
+      setProfile(prev => (prev ? { ...prev, ...changes } : prev));
+      await updateProfile(userId, changes);
+    },
+    [session?.user?.id],
+  );
+
   const value = useMemo<AppState>(
     () => ({
       user,
+      profile,
+      saveProfile,
       userId: session?.user?.id ?? null,
       role,
       isLoadingSession,
@@ -250,6 +272,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }),
     [
       user,
+      profile,
+      saveProfile,
       role,
       isLoadingSession,
       isGuest,

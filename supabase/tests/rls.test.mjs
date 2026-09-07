@@ -465,6 +465,126 @@ const main = async () => {
     }),
   );
 
+  // --- messages -------------------------------------------------------------
+  console.log('\nmessages are between the parties, and immutable:');
+
+  const sent = await asUser(db, tenantA, async () => {
+    const r = await db.query(
+      'insert into public.messages (tenancy_id, sender_id, body) values ($1, $2, $3) returning id',
+      [tenancyA, tenantA, 'The kitchen tap is dripping.'],
+    );
+    return r.rows[0].id;
+  });
+  check('a tenant can write to their landlord', typeof sent, 'string');
+
+  const landlordReads = await asUser(db, landlordA, async () => {
+    const r = await db.query('select body from public.messages where tenancy_id = $1', [tenancyA]);
+    return r.rows.map(x => x.body);
+  });
+  check('and the landlord reads it', landlordReads, ['The kitchen tap is dripping.']);
+
+  const outsiderReads = await asUser(db, landlordB, async () => {
+    const r = await db.query('select count(*)::int as n from public.messages');
+    return r.rows[0].n;
+  });
+  check('somebody outside the tenancy sees nothing', outsiderReads, 0);
+
+  checkDenied(
+    'and cannot write into it either',
+    await expectDenied(db, landlordB, () =>
+      db.query(
+        'insert into public.messages (tenancy_id, sender_id, body) values ($1, $2, $3)',
+        [tenancyA, landlordB, 'Hello?'],
+      ),
+    ),
+  );
+
+  checkDenied(
+    'nobody can send as somebody else',
+    await expectDenied(db, landlordA, () =>
+      db.query(
+        'insert into public.messages (tenancy_id, sender_id, body) values ($1, $2, $3)',
+        [tenancyA, tenantA, 'Words the tenant never wrote'],
+      ),
+    ),
+  );
+
+  checkDenied(
+    'an empty message is refused',
+    await expectDenied(db, tenantA, () =>
+      db.query(
+        'insert into public.messages (tenancy_id, sender_id, body) values ($1, $2, $3)',
+        [tenancyA, tenantA, '   '],
+      ),
+    ),
+  );
+
+  checkDenied(
+    'the recipient cannot rewrite what was said',
+    await expectDenied(db, landlordA, () =>
+      db.query("update public.messages set body = 'I never said that' where id = $1", [sent]),
+    ),
+  );
+
+  checkDenied(
+    'nor can the sender, once it has gone',
+    await expectDenied(db, tenantA, async () => {
+      const r = await db.query(
+        "update public.messages set body = 'edited' where id = $1 returning id",
+        [sent],
+      );
+      if (r.rows.length === 0) throw new Error('no rows updated (RLS filtered them)');
+      return r;
+    }),
+  );
+
+  const markedRead = await asUser(db, landlordA, async () => {
+    await db.query('update public.messages set read_at = now() where id = $1', [sent]);
+    const r = await db.query('select read_at is not null as read from public.messages where id = $1', [sent]);
+    return r.rows[0].read;
+  });
+  check('the recipient can mark it read', markedRead, true);
+
+  checkDenied(
+    'but cannot mark it unread again',
+    await expectDenied(db, landlordA, () =>
+      db.query('update public.messages set read_at = null where id = $1', [sent]),
+    ),
+  );
+
+  checkDenied(
+    'and a sender cannot mark their own message read',
+    await expectDenied(db, tenantA, async () => {
+      const r = await db.query(
+        'update public.messages set read_at = now() where id = $1 returning id',
+        [sent],
+      );
+      if (r.rows.length === 0) throw new Error('no rows updated (RLS filtered them)');
+      return r;
+    }),
+  );
+
+  checkDenied(
+    'a message cannot be deleted at all',
+    // A delete with no policy matches no rows rather than raising, which reads
+    // as success. Ask what it actually removed.
+    await expectDenied(db, landlordA, async () => {
+      const r = await db.query('delete from public.messages where id = $1 returning id', [sent]);
+      if (r.rows.length === 0) throw new Error('no rows deleted (RLS filtered them)');
+      return r;
+    }),
+  );
+
+  const survives = await asUser(db, landlordA, async () => {
+    const r = await db.query('select count(*)::int as n from public.messages where id = $1', [sent]);
+    return r.rows[0].n;
+  });
+  check('and it is still there afterwards', survives, 1);
+
+  const anonSees = await db.query("select count(*)::int as n from pg_policies where tablename = 'messages'");
+  check('the messages table is governed by policies', anonSees.rows[0].n >= 3, true);
+
+
   // --- storage paths --------------------------------------------------------
   console.log('\nstorage path authorisation:');
 

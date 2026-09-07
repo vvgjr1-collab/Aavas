@@ -8,7 +8,7 @@ import {
   useParams,
   useSearchParams,
 } from 'react-router-dom';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { arrivedWithAuthCode } from '../lib/supabase';
@@ -27,6 +27,9 @@ import { PropertyListing } from '../components/PropertyListing';
 import { PropertyManagement } from '../components/PropertyManagement';
 import { ResetPassword } from '../components/auth/ResetPassword';
 import { EmailConfirmed } from '../components/auth/EmailConfirmed';
+import { AccountPage } from '../components/account/AccountPage';
+import { completionFor } from '../lib/profileCompletion';
+import { listDocuments } from '../lib/records';
 import { PrivacyPolicy } from '../components/legal/PrivacyPolicy';
 import { Terms } from '../components/legal/Terms';
 
@@ -245,6 +248,78 @@ function ResetPasswordRoute() {
     <div className="mx-auto max-w-md">
       <ResetPassword onDone={() => navigate(isAuthenticated ? '/role' : '/login', { replace: true })} />
     </div>
+  );
+}
+
+/**
+ * The account screen, and the completion figure that drives it.
+ *
+ * The counts it needs live in two different places - properties and tenancies
+ * in the tenancy provider, the agreement in storage - so they are gathered
+ * here rather than inside a presentational component.
+ */
+function AccountRoute() {
+  const navigate = useNavigate();
+  const { profile, saveProfile, role, user, clearRole } = useAppState();
+  const { portfolio, myTenancy } = useTenancy();
+  const handleSignOut = useSignOut();
+  const [saving, setSaving] = useState(false);
+  const [hasAgreement, setHasAgreement] = useState(false);
+
+  useEffect(() => {
+    if (!myTenancy) {
+      setHasAgreement(false);
+      return;
+    }
+    let active = true;
+    listDocuments(myTenancy.id, 'agreement')
+      .then(rows => {
+        if (active) setHasAgreement(rows.length > 0);
+      })
+      .catch(() => {
+        /* treated as not uploaded, which is the safe way round */
+      });
+    return () => {
+      active = false;
+    };
+  }, [myTenancy?.id]);
+
+  const completion = completionFor({
+    profile,
+    role,
+    propertyCount: portfolio.length,
+    hasTenancy: Boolean(myTenancy),
+    hasAgreement,
+  });
+
+  return (
+    <AccountPage
+      profile={profile}
+      email={user?.email ?? ''}
+      role={role}
+      completion={completion}
+      saving={saving}
+      onSave={async changes => {
+        setSaving(true);
+        try {
+          await saveProfile(changes);
+          toast.success('Saved');
+        } catch (err) {
+          toast.error('Could not save that', {
+            description: err instanceof Error ? err.message : 'Please try again.',
+          });
+        } finally {
+          setSaving(false);
+        }
+      }}
+      onSwitchRole={() => {
+        clearRole();
+        navigate('/role');
+      }}
+      onSignOut={handleSignOut}
+      onBack={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
+      onGo={href => navigate(href)}
+    />
   );
 }
 
@@ -469,6 +544,8 @@ function LandlordContactRoute() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { userName, userEmail } = useDisplayUser();
+  const { userId } = useAppState();
+  const { myTenancy, view } = useTenancy();
   const raw = params.get('tab');
   const tab = raw === 'call' || raw === 'history' ? raw : 'message';
   return (
@@ -477,6 +554,9 @@ function LandlordContactRoute() {
       userEmail={userEmail}
       propertyAddress={TENANT_PROPERTY_ADDRESS}
       initialTab={tab}
+      tenancyId={myTenancy?.id ?? null}
+      viewerId={userId}
+      landlordName={view.owner.name}
       onBack={() => navigate('/tenant')}
     />
   );
@@ -632,6 +712,7 @@ export function AppRoutes() {
         <Route path="/reset-password" element={<ResetPasswordRoute />} />
         <Route path="/welcome" element={<WelcomeRoute />} />
         <Route path="/role" element={<RoleSelectionRoute />} />
+        <Route path="/account" element={<AccountRoute />} />
 
         <Route path="/tenant/setup" element={<TenantSetupRoute />} />
         <Route

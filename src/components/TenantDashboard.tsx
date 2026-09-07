@@ -22,6 +22,7 @@ import { usePayments } from '../hooks/usePayments';
 import { currentRent, formatDue } from '../lib/rent';
 import { withdrawTenancy } from '../lib/tenancy';
 import { EndNotice } from './tenancy/EndNotice';
+import { AccountButton } from './account/AccountButton';
 import { Repeat } from 'lucide-react';
 
 /** A pending claim is not an active tenancy, and saying so avoids a false reassurance. */
@@ -269,6 +270,7 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
           <span className="text-xl font-aavas" style={{ color: 'var(--tenant-primary)' }}>Aavas</span>
         </div>
         <div className="flex items-center gap-1">
+          <AccountButton />
           <Button
             aria-label="Switch role"
             variant="ghost"

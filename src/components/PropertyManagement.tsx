@@ -37,6 +37,8 @@ import { useTenancy } from '../context/TenancyProvider';
 import { useAppState } from '../context/AppState';
 import { PropertyEditor } from './landlord/PropertyEditor';
 import { EndNotice } from './tenancy/EndNotice';
+import { Conversation } from './chat/Conversation';
+import { DocumentsPanel } from './documents/DocumentsPanel';
 import { usePayments } from '../hooks/usePayments';
 import { useMembers } from '../hooks/useMembers';
 import { rentHistory as rentPeriods, type RentPeriod } from '../lib/rent';
@@ -96,7 +98,6 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
-  const [newMessage, setNewMessage] = useState('');
 
   // The tenant is whoever joined this lease, read from their own profile.
   // A landlord cannot edit somebody else's account, so the "Edit Details"
@@ -104,63 +105,6 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
   // reload - an invitation to record something that was never saved.
   const tenant = members[0] ?? null;
 
-  // Mock chat messages
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: 'tenant',
-      text: 'Hello, the bathroom faucet is leaking. Could you please arrange for a plumber?',
-      timestamp: '10:30 AM',
-      date: 'Oct 25'
-    },
-    {
-      id: 2,
-      sender: 'landlord',
-      text: 'Good morning! I\'ll send a plumber tomorrow morning around 10 AM. Will that work for you?',
-      timestamp: '11:15 AM',
-      date: 'Oct 25'
-    },
-    {
-      id: 3,
-      sender: 'tenant',
-      text: 'Yes, that works perfectly. Thank you for the quick response!',
-      timestamp: '11:20 AM',
-      date: 'Oct 25'
-    },
-    {
-      id: 4,
-      sender: 'landlord',
-      text: 'You\'re welcome! Let me know if you need anything else.',
-      timestamp: '11:25 AM',
-      date: 'Oct 25'
-    }
-  ]);
-
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      const newMsg = {
-        id: messages.length + 1,
-        sender: 'landlord',
-        text: newMessage,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-        date: 'Today'
-      };
-      setMessages([...messages, newMsg]);
-      setNewMessage('');
-    }
-  };
-
-  /**
-   * Print the report, and only the report.
-   *
-   * window.print() prints the document, which is why this used to come out
-   * as a picture of the screen: the dashboard behind the dialog, the dimmed
-   * overlay over it, and the report clipped to whatever fitted in the scroll
-   * area. The stylesheet can undo all of that, but only if it can tell which
-   * part of the page to keep - and the dialog lives in a portal whose wrapper
-   * this component never sees. So walk up from the report to the element that
-   * sits directly under <body> and mark that.
-   */
   const handlePrintReport = () => {
     const node = reportRef.current;
     if (!node) {
@@ -199,7 +143,6 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
       overduePayments,
       rentHistory,
       utilityBills,
-      messages,
       generatedDate: new Date().toLocaleDateString('en-IN', { 
         year: 'numeric', 
         month: 'long', 
@@ -290,6 +233,12 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
       <TenancyAccess propertyId={property.id} tenancy={tenancy} />
 
       <TenantActivity tenancy={tenancy} />
+
+      <DocumentsPanel
+        tenancyId={tenancy?.id ?? null}
+        userId={userId}
+        description="The rent agreement, police verification and anything else on this tenancy."
+      />
 
       {/* Notice runs both ways: the landlord can give it here, and agrees to
           the tenant's here too, on the property it concerns. */}
@@ -585,58 +534,19 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
             </div>
           </DialogHeader>
 
-          {/* Messages Area */}
-          <ScrollArea className="flex-1 px-6 py-4 bg-[#f4eedf]/20">
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${message.sender === 'landlord' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`max-w-[70%] ${message.sender === 'landlord' ? 'order-2' : 'order-1'}`}>
-                    <div
-                      className={`rounded-lg px-4 py-2 ${
-                        message.sender === 'landlord'
-                          ? 'bg-[#2e3a8c] text-white'
-                          : 'bg-white border border-[#2e3a8c]/20'
-                      }`}
-                    >
-                      <p className="text-sm">{message.text}</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1 px-2">
-                      {message.timestamp}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </ScrollArea>
-
-          {/* Message Input */}
-          <div className="p-4 border-t bg-white">
-            <div className="flex items-center space-x-2">
-              <Input
-                placeholder="Type a message..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSendMessage();
-                  }
-                }}
-                className="flex-1 border-[#2e3a8c]/30 focus-visible:ring-[#2e3a8c]"
-              />
-              <Button
-                aria-label="Send message"
-                onClick={handleSendMessage}
-                className="bg-[#ff914d] hover:bg-[#e57a38] text-white"
-                size="icon"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
+          {/* One real thread per tenancy, shared with the tenant's screen. */}
+          <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
+            <Conversation
+              tenancyId={tenancy?.id ?? null}
+              viewerId={userId}
+              counterparty={tenant?.full_name ?? 'Your tenant'}
+              disabled={
+                tenancy
+                  ? undefined
+                  : 'Nobody has joined this property yet, so there is nobody to message.'
+              }
+              emptyHint="No messages yet. Anything you send appears on your tenant's dashboard."
+            />
           </div>
         </DialogContent>
       </Dialog>

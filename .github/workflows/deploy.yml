@@ -47,6 +47,11 @@ jobs:
       - name: Rent period tests
         run: npm run test:rent
 
+      # What "complete" means branches by role, and a browser only ever tests
+      # the account it happens to be signed in as.
+      - name: Account completion tests
+        run: npm run test:completion
+
       - name: Build
         run: npm run build
         env:

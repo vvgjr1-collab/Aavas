@@ -263,3 +263,64 @@ export async function signedDocumentUrl(path: string, seconds = 300): Promise<st
   if (error) throw new Error(error.message);
   return data.signedUrl;
 }
+
+/**
+ * Remove a document, row and object.
+ *
+ * The row goes first: a row pointing at a deleted object is a broken link on
+ * screen, while an object with no row is invisible and harmless. If the policy
+ * refuses the row, the file is still there and nothing has been half-done.
+ */
+export async function deleteDocument(doc: DbDocument): Promise<void> {
+  const client = requireSupabase();
+  const { error } = await client.from('documents').delete().eq('id', doc.id);
+  if (error) throw new Error(error.message);
+  await client.storage.from(DOCUMENTS_BUCKET).remove([doc.storage_path]).catch(() => {});
+}
+
+/** What a person may attach to a tenancy, and what each one is for. */
+export const DOCUMENT_KINDS = [
+  {
+    id: 'agreement',
+    label: 'Rent agreement',
+    hint: 'The signed lease. Both of you can open it here afterwards.',
+  },
+  {
+    id: 'police_verification',
+    label: 'Police verification',
+    hint: 'The tenant verification form or its acknowledgement.',
+  },
+  {
+    id: 'id_proof',
+    label: 'ID proof',
+    hint: 'Aadhaar, passport or driving licence.',
+  },
+  {
+    id: 'address_proof',
+    label: 'Address proof',
+    hint: 'A utility bill or bank statement, if one was asked for.',
+  },
+  {
+    id: 'receipt',
+    label: 'Receipt',
+    hint: 'A rent or deposit receipt worth keeping.',
+  },
+  { id: 'other', label: 'Something else', hint: '' },
+] as const;
+
+export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
+
+export const DOCUMENT_ACCEPT =
+  'application/pdf,image/jpeg,image/png,image/webp,image/heic';
+
+/** Refuses what the bucket should not hold, with a reason worth reading. */
+export function rejectDocument(file: File): string | null {
+  const ok = DOCUMENT_ACCEPT.split(',');
+  if (file.type && !ok.includes(file.type)) {
+    return `${file.name} is not a PDF or an image.`;
+  }
+  if (file.size > MAX_DOCUMENT_BYTES) {
+    return `${file.name} is larger than 10 MB.`;
+  }
+  return null;
+}

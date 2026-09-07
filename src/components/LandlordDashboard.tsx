@@ -71,6 +71,7 @@ import { Repeat } from "lucide-react";
 import { PendingClaims } from "./landlord/PendingClaims";
 import { ReportedPayments } from "./landlord/ReportedPayments";
 import { EndRequests } from "./landlord/EndRequests";
+import { AccountButton } from "./account/AccountButton";
 import type { DbTenancy } from "../lib/tenancy";
 import logoImage from "../assets/5552fb9550c2859aaeadad56af03cd7adcd56e69.png";
 import { toPropertyData } from "../types/property";
@@ -227,6 +228,7 @@ export function LandlordDashboard({
             </span>
           </div>
           <div className="flex items-center gap-1">
+            <AccountButton />
             <Button
               aria-label="Switch role"
               variant="ghost"
