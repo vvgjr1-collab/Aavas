@@ -66,8 +66,16 @@ function DialogContent({
           // Phone: a sheet that rises from the bottom edge, square at the
           // bottom, clear of the home indicator.
           "inset-x-0 bottom-0 max-h-[92vh] overflow-y-auto rounded-t-3xl rounded-b-none pb-[max(1.5rem,env(safe-area-inset-bottom))] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-          // md and up: the centred card, unchanged.
-          "md:inset-x-auto md:bottom-auto md:top-[50%] md:left-[50%] md:w-full md:max-w-lg md:max-h-none md:translate-x-[-50%] md:translate-y-[-50%] md:rounded-3xl md:pb-6 md:data-[state=closed]:zoom-out-95 md:data-[state=open]:zoom-in-95 md:data-[state=closed]:slide-out-to-bottom-0 md:data-[state=open]:slide-in-from-bottom-0",
+          // md and up: the centred card.
+          //
+          // It used to lift the height cap entirely (md:max-h-none). A dialog
+          // taller than the window then grew past both edges - centred, so it
+          // overflowed top and bottom equally - and with no cap there was
+          // nothing to scroll: the footer sat below the fold, unreachable. A
+          // laptop is where that bites, because the window is short rather
+          // than narrow. The cap stays; overflow-y-auto from the phone rules
+          // is not overridden here, so it keeps applying.
+          "md:inset-x-auto md:bottom-auto md:top-[50%] md:left-[50%] md:w-full md:max-w-lg md:max-h-[85vh] md:translate-x-[-50%] md:translate-y-[-50%] md:rounded-3xl md:pb-6 md:data-[state=closed]:zoom-out-95 md:data-[state=open]:zoom-in-95 md:data-[state=closed]:slide-out-to-bottom-0 md:data-[state=open]:slide-in-from-bottom-0",
           className,
         )}
         {...props}

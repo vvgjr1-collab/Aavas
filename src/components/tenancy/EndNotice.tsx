@@ -258,7 +258,9 @@ export function EndNotice({
             </p>
           </div>
 
-          <DialogFooter>
+          {/* Sticky, so a long list of clauses never scrolls the thing you
+              came here to press out of reach. */}
+          <DialogFooter className="sticky bottom-0 -mx-6 border-t border-[var(--hairline)] bg-background px-6 pt-4">
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
