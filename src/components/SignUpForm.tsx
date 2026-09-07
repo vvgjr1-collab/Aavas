@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription } from './ui/alert';
 import logoImage from '../assets/9916df943b90f5078a96ced9635c98fd96bc1655.png';
-import { toast } from 'sonner';
 
 interface SignUpFormData {
   name: string;
@@ -379,21 +378,29 @@ export function SignUpForm({ onSwitchToLogin, onSubmitSignUp, onBack, onGuestLog
                   className="text-sm cursor-pointer select-none leading-5"
                 >
                   I agree to the{' '}
-                  <button
-                    type="button"
+                  {/* A new tab, so reading the terms does not discard a
+                      half-filled form. stopPropagation because these sit
+                      inside the checkbox's label, and a click that reached it
+                      would tick the box on the way to the page. */}
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={e => e.stopPropagation()}
                     className="text-sm font-medium text-primary hover:underline"
-                    onClick={() => toast.info('Terms and conditions coming soon!')}
                   >
                     Terms and Conditions
-                  </button>{' '}
+                  </Link>{' '}
                   and{' '}
-                  <button
-                    type="button"
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={e => e.stopPropagation()}
                     className="text-sm font-medium text-primary hover:underline"
-                    onClick={() => toast.info('Privacy policy coming soon!')}
                   >
                     Privacy Policy
-                  </button>
+                  </Link>
                 </Label>
                 {errors.agreeToTerms && (
                   <motion.p
@@ -433,20 +440,6 @@ export function SignUpForm({ onSwitchToLogin, onSubmitSignUp, onBack, onGuestLog
                   'Create account'
                 )}
               </Button>
-
-              {/* Said where it is actually being agreed to, rather than only
-                  in a footer on a page they may never have opened. */}
-              <p className="mt-3 text-center text-xs text-muted-foreground">
-                By creating an account you agree to the{' '}
-                <Link to="/terms" className="underline hover:text-foreground">
-                  Terms
-                </Link>{' '}
-                and the{' '}
-                <Link to="/privacy" className="underline hover:text-foreground">
-                  Privacy Policy
-                </Link>
-                .
-              </p>
             </motion.div>
           </form>
 
