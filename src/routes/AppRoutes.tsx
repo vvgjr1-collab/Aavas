@@ -25,6 +25,8 @@ import { LandlordDashboard } from '../components/LandlordDashboard';
 import { PropertyListing } from '../components/PropertyListing';
 import { PropertyManagement } from '../components/PropertyManagement';
 import { ResetPassword } from '../components/auth/ResetPassword';
+import { PrivacyPolicy } from '../components/legal/PrivacyPolicy';
+import { Terms } from '../components/legal/Terms';
 
 import { useAppState, useDisplayUser } from '../context/AppState';
 import { TENANT_PROPERTY_ADDRESS } from '../data/properties';
@@ -136,7 +138,23 @@ function HomeRoute() {
       <HomePage
         onGetStarted={() => navigate('/signup')}
         onSignIn={() => navigate('/login')}
+        onOpenLegal={page => navigate(`/${page}`)}
       />
+    </PageTransition>
+  );
+}
+
+/**
+ * Reachable signed out, and outside every gate: someone reading the privacy
+ * policy to decide whether to sign up must not be asked to sign in first.
+ */
+function LegalRoute({ page }: { page: 'privacy' | 'terms' }) {
+  const navigate = useNavigate();
+  // Back to wherever they came from, or home if the page was opened directly.
+  const back = () => (window.history.length > 1 ? navigate(-1) : navigate('/'));
+  return (
+    <PageTransition>
+      {page === 'privacy' ? <PrivacyPolicy onBack={back} /> : <Terms onBack={back} />}
     </PageTransition>
   );
 }
@@ -570,6 +588,8 @@ export function AppRoutes() {
     <AnimatePresence mode="wait" initial={false}>
       <Routes location={location} key={location.pathname}>
       <Route path="/" element={<HomeRoute />} />
+      <Route path="/privacy" element={<LegalRoute page="privacy" />} />
+      <Route path="/terms" element={<LegalRoute page="terms" />} />
       <Route element={<AppLayout />}>
         <Route path="/login" element={<LoginRoute />} />
         <Route path="/signup" element={<SignUpRoute />} />

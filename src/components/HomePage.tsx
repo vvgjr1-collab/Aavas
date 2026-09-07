@@ -19,9 +19,13 @@ import {
 import { Button } from "./ui/button";
 import logoImage from "../assets/a50520d040d7cd75938aa9ef0a9e11b29117b932.png";
 
+import { LEGAL, hasLegalContact } from '../lib/legal';
+
 interface HomePageProps {
   onGetStarted: () => void;
   onSignIn: () => void;
+  /** The footer links. Absent in a preview that has nowhere to send them. */
+  onOpenLegal?: (page: 'privacy' | 'terms') => void;
 }
 
 /** The house entrance: rise a little, fade in, decelerate. */
@@ -66,7 +70,7 @@ function CountUp({ to, suffix = "" }: { to: number; suffix?: string }) {
   );
 }
 
-export function HomePage({ onGetStarted, onSignIn }: HomePageProps) {
+export function HomePage({ onGetStarted, onSignIn, onOpenLegal }: HomePageProps) {
   const { scrollY } = useScroll();
   const [scrolled, setScrolled] = useState(false);
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 24));
@@ -424,14 +428,29 @@ export function HomePage({ onGetStarted, onSignIn }: HomePageProps) {
             </span>
           </div>
           <div className="flex gap-6">
-            {["Privacy", "Terms", "Contact"].map((item) => (
-              <button
-                key={item}
+            <button
+              onClick={() => onOpenLegal?.('privacy')}
+              className="-mx-2 rounded-lg px-2 py-3 transition-colors duration-200 hover:text-white"
+            >
+              Privacy
+            </button>
+            <button
+              onClick={() => onOpenLegal?.('terms')}
+              className="-mx-2 rounded-lg px-2 py-3 transition-colors duration-200 hover:text-white"
+            >
+              Terms
+            </button>
+            {/* "Contact" was a button that did nothing. It comes back the
+                moment LEGAL.contactEmail names a mailbox somebody reads;
+                until then a dead control is worse than no control. */}
+            {hasLegalContact && (
+              <a
+                href={`mailto:${LEGAL.contactEmail}`}
                 className="-mx-2 rounded-lg px-2 py-3 transition-colors duration-200 hover:text-white"
               >
-                {item}
-              </button>
-            ))}
+                Contact
+              </a>
+            )}
           </div>
         </div>
       </footer>

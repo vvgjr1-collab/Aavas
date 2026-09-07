@@ -19,6 +19,8 @@ interface SignUpFormData {
   agreeToTerms: boolean;
 }
 
+import { Link } from 'react-router-dom';
+
 interface SignUpFormProps {
   onSwitchToLogin: () => void;
   /**
@@ -431,6 +433,20 @@ export function SignUpForm({ onSwitchToLogin, onSubmitSignUp, onBack, onGuestLog
                   'Create account'
                 )}
               </Button>
+
+              {/* Said where it is actually being agreed to, rather than only
+                  in a footer on a page they may never have opened. */}
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                By creating an account you agree to the{' '}
+                <Link to="/terms" className="underline hover:text-foreground">
+                  Terms
+                </Link>{' '}
+                and the{' '}
+                <Link to="/privacy" className="underline hover:text-foreground">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
             </motion.div>
           </form>
 
