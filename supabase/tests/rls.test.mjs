@@ -915,6 +915,82 @@ const main = async () => {
   check('the tenant agreeing ends it just the same', endedByTenant, 'ended');
 
 
+  // --- deleting an account -------------------------------------------------
+  console.log('\nan account cannot be closed out from under the other party:');
+
+  // propD's tenancy was ended earlier; give landlordB a live one to be held by.
+  const propE = await asUser(db, landlordB, async () => {
+    const r = await db.query(
+      `insert into public.properties (landlord_id, title, address_line, city, rent, deposit)
+       values ($1, 'Held Flat', '3 Hill Road', 'Mumbai', 20000, 40000) returning id`,
+      [landlordB],
+    );
+    return r.rows[0].id;
+  });
+  const codeE = await asUser(db, landlordB, async () => {
+    const r = await db.query('select code from public.current_join_code($1)', [propE]);
+    return r.rows[0].code;
+  });
+  const leaver = await createUser(db, 'leaver@example.com', 'Lena Leaver');
+  const tenancyE = await asUser(db, leaver, async () => {
+    const r = await db.query('select public.redeem_invite($1) as id', [codeE]);
+    return r.rows[0].id;
+  });
+
+  const landlordBlocked = await asUser(db, landlordB, async () => {
+    const r = await db.query('select reason, is_landlord from public.account_deletion_block()');
+    return r.rows[0];
+  });
+  check('the landlord is told why not', landlordBlocked, {
+    reason: 'You are the landlord on a live tenancy.',
+    is_landlord: true,
+  });
+
+  const tenantBlocked = await asUser(db, leaver, async () => {
+    const r = await db.query('select reason, is_landlord from public.account_deletion_block()');
+    return r.rows[0];
+  });
+  check('and so is the tenant', tenantBlocked, {
+    reason: 'You are the tenant on a live tenancy.',
+    is_landlord: false,
+  });
+
+  checkDenied(
+    'the landlord cannot delete themselves mid-tenancy',
+    await expectDenied(db, landlordB, () => db.query('select public.delete_my_account()')),
+  );
+
+  checkDenied(
+    'nor can the tenant',
+    await expectDenied(db, leaver, () => db.query('select public.delete_my_account()')),
+  );
+
+  const stillThere = await db.query('select count(*)::int as n from public.properties where id = $1', [propE]);
+  check('and the property is untouched by the attempt', stillThere.rows[0].n, 1);
+
+  // End it the way the app does, and the block lifts.
+  await asUser(db, leaver, () =>
+    db.query('select public.request_end_tenancy($1, $2, $3)', [tenancyE, 'moving_out', '']),
+  );
+  await asUser(db, landlordB, () => db.query('select public.approve_end_tenancy($1)', [tenancyE]));
+
+  const afterEnding = await asUser(db, leaver, async () => {
+    const r = await db.query('select count(*)::int as n from public.account_deletion_block()');
+    return r.rows[0].n;
+  });
+  check('once the tenancy is over, nothing blocks it', afterEnding, 0);
+
+  await asUser(db, leaver, () => db.query('select public.delete_my_account()'));
+  const gone = {
+    auth: (await db.query('select count(*)::int as n from auth.users where id = $1', [leaver])).rows[0].n,
+    profile: (await db.query('select count(*)::int as n from public.profiles where id = $1', [leaver])).rows[0].n,
+  };
+  check('and the account really goes, profile with it', gone, { auth: 0, profile: 0 });
+
+  const propertySurvives = await db.query('select count(*)::int as n from public.properties where id = $1', [propE]);
+  check("the other party's property survives", propertySurvives.rows[0].n, 1);
+
+
   // --- rotating join codes -------------------------------------------------
   console.log('\nrotating join codes:');
 

@@ -21,7 +21,8 @@ import { Progress } from '../ui/progress';
 import { Separator } from '../ui/separator';
 import { completionFor, looksLikePhone, type Completion } from '../../lib/profileCompletion';
 import { sendPasswordReset } from '../../lib/auth';
-import type { Profile } from '../../lib/auth';
+import type { DeletionBlock, Profile } from '../../lib/auth';
+import { DeleteAccount } from './DeleteAccount';
 
 /**
  * The account, and the things sign-up could not reasonably ask for.
@@ -43,6 +44,8 @@ export function AccountPage({
   onSignOut,
   onBack,
   onGo,
+  onGoToNotice,
+  onDeleted,
 }: {
   profile: Profile | null;
   email: string;
@@ -54,6 +57,9 @@ export function AccountPage({
   onSignOut?: () => void;
   onBack: () => void;
   onGo: (href: string) => void;
+  /** Takes them to where notice is given, on the side the tenancy blocks. */
+  onGoToNotice: (block: DeletionBlock) => void;
+  onDeleted: () => void;
 }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -295,14 +301,26 @@ export function AccountPage({
         </CardContent>
       </Card>
 
-      <p className="text-xs text-muted-foreground">
-        Deleting an account is not self-service yet &mdash; ask, and it will be
-        done by hand. See the{' '}
-        <button className="underline" onClick={() => onGo('/privacy')}>
-          privacy policy
-        </button>
-        .
-      </p>
+      <Card className="shadow-[var(--shadow-md)] border border-destructive/25">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg text-destructive">Closing your account</CardTitle>
+          <CardDescription>
+            Available once no tenancy is live. What happens to your records is
+            set out in the{' '}
+            <button className="underline" onClick={() => onGo('/privacy')}>
+              privacy policy
+            </button>
+            .
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DeleteAccount
+            email={email}
+            onGoToNotice={onGoToNotice}
+            onDeleted={onDeleted}
+          />
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }

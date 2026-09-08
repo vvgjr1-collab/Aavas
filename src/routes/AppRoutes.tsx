@@ -29,6 +29,8 @@ import { ResetPassword } from '../components/auth/ResetPassword';
 import { EmailConfirmed } from '../components/auth/EmailConfirmed';
 import { AccountPage } from '../components/account/AccountPage';
 import { completionFor } from '../lib/profileCompletion';
+import { attentionFor } from '../lib/attention';
+import { useLandlordActivity } from '../hooks/useLandlordActivity';
 import { listDocuments } from '../lib/records';
 import { PrivacyPolicy } from '../components/legal/PrivacyPolicy';
 import { Terms } from '../components/legal/Terms';
@@ -332,6 +334,18 @@ function AccountRoute() {
       onSignOut={handleSignOut}
       onBack={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
       onGo={href => navigate(href)}
+      // Straight to where notice is actually given, on the side that blocks:
+      // the landlord gives it on the property page, the tenant on their
+      // dashboard. Being told "end the tenancy first" and left to find it is
+      // half an answer.
+      onGoToNotice={block =>
+        navigate(
+          block.is_landlord && block.property_id
+            ? `/landlord/properties/${block.property_id}`
+            : '/tenant',
+        )
+      }
+      onDeleted={() => navigate('/', { replace: true })}
     />
   );
 }
@@ -584,6 +598,15 @@ function LandlordDashboardRoute() {
   const { properties: demoProperties, updateProperty, deleteProperty, isAuthenticated } =
     useAppState();
   const { portfolio, pendingClaims, landlordTenancies, refresh, error } = useTenancy();
+  // The strip needs every tenancy at once; the panels below it each read one.
+  const { payments, complaints } = useLandlordActivity(isAuthenticated ? landlordTenancies : []);
+  const attention = attentionFor({
+    properties: isAuthenticated ? portfolio : [],
+    tenancies: isAuthenticated ? landlordTenancies : [],
+    pendingClaims: isAuthenticated ? pendingClaims : [],
+    payments,
+    complaints,
+  });
   const handleSignOut = useSignOut();
   const { userName, userEmail } = useDisplayUser();
   const onBack = useBackToRoleSelection();
@@ -598,6 +621,8 @@ function LandlordDashboardRoute() {
       properties={properties}
       onSignOut={isAuthenticated ? handleSignOut : undefined}
       pendingClaims={isAuthenticated ? pendingClaims : []}
+      attention={attention}
+      onNavigate={href => navigate(href)}
       loadError={isAuthenticated ? error : null}
       tenancies={isAuthenticated ? landlordTenancies : []}
       refreshTenancy={refresh}

@@ -52,6 +52,11 @@ jobs:
       - name: Account completion tests
         run: npm run test:completion
 
+      # What reaches the landlord's attention strip is judgement, not
+      # arithmetic, and a browser run only ever sees one portfolio.
+      - name: Attention tests
+        run: npm run test:attention
+
       - name: Build
         run: npm run build
         env:

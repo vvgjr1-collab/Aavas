@@ -259,3 +259,39 @@ export function displayNameFor(profile: Profile | null, user: User | null): stri
     'User'
   );
 }
+
+export interface DeletionBlock {
+  reason: string;
+  tenancy_id: string;
+  property_id: string | null;
+  is_landlord: boolean;
+}
+
+/**
+ * Why this account cannot be deleted yet, or null when it can.
+ *
+ * Asked before the confirmation is offered, so somebody is told about the live
+ * tenancy instead of typing their email and being refused afterwards.
+ */
+export async function accountDeletionBlock(): Promise<DeletionBlock | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc('account_deletion_block');
+  if (error) throw new Error(friendlyAuthError(error.message));
+  const rows = (data ?? []) as DeletionBlock[];
+  return rows[0] ?? null;
+}
+
+/**
+ * Delete the caller's own account.
+ *
+ * The database refuses while a tenancy is live, whichever side they are on -
+ * every record hangs off the profile by cascade, so leaving mid-tenancy would
+ * take the property, the lease and the payment history out from under the
+ * other party.
+ */
+export async function deleteMyAccount(): Promise<void> {
+  const client = requireSupabase();
+  const { error } = await client.rpc('delete_my_account');
+  if (error) throw new Error(friendlyAuthError(error.message));
+  await client.auth.signOut();
+}

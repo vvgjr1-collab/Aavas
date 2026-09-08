@@ -72,6 +72,8 @@ import { PendingClaims } from "./landlord/PendingClaims";
 import { ReportedPayments } from "./landlord/ReportedPayments";
 import { EndRequests } from "./landlord/EndRequests";
 import { AccountButton } from "./account/AccountButton";
+import { NeedsAttention } from "./landlord/NeedsAttention";
+import type { AttentionItem } from "../lib/attention";
 import { useAppState } from "../context/AppState";
 import { logCall } from "../lib/messages";
 import type { DbTenancy } from "../lib/tenancy";
@@ -85,6 +87,9 @@ interface LandlordDashboardProps {
   properties: Property[];
   /** Tenant-declared tenancies addressed to this landlord. Empty for guests. */
   pendingClaims?: DbTenancy[];
+  /** What is waiting on this landlord, derived from their own data. */
+  attention?: AttentionItem[];
+  onNavigate?: (href: string) => void;
   /** Set when the portfolio could not be read at all. */
   loadError?: string | null;
   tenancies?: DbTenancy[];
@@ -117,6 +122,8 @@ export function LandlordDashboard({
   properties,
   pendingClaims = [],
   tenancies = [],
+  attention = [],
+  onNavigate = () => {},
   loadError = null,
   refreshTenancy = () => {},
   onSignOut,
@@ -334,9 +341,27 @@ export function LandlordDashboard({
         </Card>
       )}
 
+      {/* The strip comes first, then the panels that act on the same things.
+          The strip is the part that survives not scrolling. */}
+      <NeedsAttention
+        items={attention}
+        onOpen={item => {
+          if (item.href) return onNavigate(item.href);
+          const property = item.propertyId
+            ? properties.find(p => p.id === item.propertyId)
+            : null;
+          if (property) return onNavigateToPropertyManagement(toPropertyData(property));
+          // Anything without a property is acted on by the panel below it.
+          document
+            .getElementById('landlord-actions')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }}
+      />
+
       {/* Things needing the landlord's attention come before the portfolio:
           a tenant waiting to be connected, or money waiting to be acknowledged,
           are both blocked on this person and invisible anywhere else. */}
+      <div id="landlord-actions" className="scroll-mt-24 space-y-6">
       {pendingClaims.length > 0 && (
         <PendingClaims
           claims={pendingClaims}
@@ -350,6 +375,7 @@ export function LandlordDashboard({
         onChanged={refreshTenancy}
       />
       <ReportedPayments tenancies={tenancies} onChanged={refreshTenancy} />
+      </div>
 
       {/* Stats Cards */}
       <motion.div

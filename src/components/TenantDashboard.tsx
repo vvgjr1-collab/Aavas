@@ -101,6 +101,18 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
   });
   const isRentPaid = settled || justPaid;
 
+  /**
+   * Whether rent has earned a place at the top of the screen.
+   *
+   * A week, because that is roughly when somebody would want reminding and
+   * still has time to act. Anything already late qualifies whatever the date.
+   */
+  const dueIn = Math.ceil(
+    (new Date(`${period.dueOn}T00:00:00`).getTime() - Date.now()) / 86400000,
+  );
+  const overdueBy = Math.max(0, -dueIn);
+  const dueSoon = !isRentPaid && (period.status === 'late' || dueIn <= 7);
+
   const [openRequests, setOpenRequests] = useState(0);
   useEffect(() => {
     if (!myTenancy) {
@@ -309,6 +321,56 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
           Manage your rental property and stay connected
         </p>
       </motion.div>
+
+      {/*
+        Rent comes to the top only while it is actually pressing.
+
+        The Pay Rent card in the sidebar is the right place for it most of the
+        month; a banner that is always there is a banner nobody reads. This
+        appears when the current month is unpaid and its due date is within a
+        week or already past, and goes when the payment is recorded - so its
+        presence means something.
+      */}
+      {dueSoon && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl p-5 text-white shadow-[var(--shadow-md)] sm:p-6"
+          style={{
+            backgroundColor:
+              period.status === 'late' ? '#b45309' : 'var(--tenant-primary)',
+          }}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium opacity-90">
+                {period.status === 'late'
+                  ? `Rent overdue${overdueBy > 0 ? ` by ${overdueBy} day${overdueBy === 1 ? '' : 's'}` : ''}`
+                  : dueIn === 0
+                    ? 'Rent due today'
+                    : `Rent due in ${dueIn} day${dueIn === 1 ? '' : 's'}`}
+              </p>
+              <p className="mt-1 text-sm opacity-80">{period.label}</p>
+              <p className="mt-1 text-3xl font-semibold tracking-[-0.02em]">
+                {period.amount > 0
+                  ? `₹${Number(period.amount).toLocaleString('en-IN')}`
+                  : propertyData.lease.monthlyRent}
+              </p>
+              <p className="mt-1 text-sm opacity-80">
+                Due {formatDue(period.dueOn)} &middot; {propertyData.address}
+              </p>
+            </div>
+            <Button
+              className="h-12 rounded-full bg-white px-6 text-base hover:bg-white/90"
+              style={{ color: 'var(--tenant-primary)' }}
+              onClick={() => setShowPaymentDialog(true)}
+            >
+              <IndianRupee className="w-4 h-4" />
+              Pay Rent Now
+            </Button>
+          </div>
+        </motion.div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Property Details Card */}
