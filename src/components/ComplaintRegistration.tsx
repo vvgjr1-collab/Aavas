@@ -477,16 +477,19 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
                 <p className="text-sm" style={{ color: 'var(--tenant-error)' }}>
                   For urgent issues like gas leaks, flooding, or security emergencies:
                 </p>
-                <Button
-                  variant="destructive"
-                  className="w-full"
-                  onClick={() => toast.info('Calling emergency contact (This is a demo)')}
+                {/* This raised a toast saying it was a demo - on the control
+                    somebody presses during a gas leak. 112 is India's single
+                    emergency number, and it answers. */}
+                <a
+                  href="tel:112"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-md bg-destructive text-destructive-foreground"
                 >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Call Emergency Line
-                </Button>
+                  <Phone className="w-4 h-4" />
+                  Call 112
+                </a>
                 <p className="text-xs text-muted-foreground">
-                  Available 24/7 for urgent matters
+                  Aavas does not route this call. Raise the complaint here
+                  afterwards so there is a record of it.
                 </p>
               </CardContent>
             </Card>

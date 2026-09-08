@@ -158,9 +158,6 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
       onNavigateToUtilityServices();
     } else if (actionId === 'complaint') {
       onNavigateToComplaintRegistration();
-    } else {
-      // In a real app, other actions would navigate to their specific pages
-      toast.info(`Opening ${actionButtons.find(btn => btn.id === actionId)?.title} (This is a demo)`);
     }
   };
 

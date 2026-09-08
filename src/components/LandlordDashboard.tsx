@@ -72,6 +72,8 @@ import { PendingClaims } from "./landlord/PendingClaims";
 import { ReportedPayments } from "./landlord/ReportedPayments";
 import { EndRequests } from "./landlord/EndRequests";
 import { AccountButton } from "./account/AccountButton";
+import { useAppState } from "../context/AppState";
+import { logCall } from "../lib/messages";
 import type { DbTenancy } from "../lib/tenancy";
 import logoImage from "../assets/5552fb9550c2859aaeadad56af03cd7adcd56e69.png";
 import { toPropertyData } from "../types/property";
@@ -100,6 +102,15 @@ interface LandlordDashboardProps {
   onBack: () => void;
 }
 
+/**
+ * Reach the tenant from the card.
+ *
+ * These raised "Calling ... (This is a demo)" and did nothing else. A tel: or
+ * mailto: link hands the number or the address to the device, which is the
+ * only thing a web page can honestly do with either. A call is written to the
+ * communication record the same way it is from the property page, so it does
+ * not matter which button somebody used.
+ */
 export function LandlordDashboard({
   userName,
   userEmail,
@@ -115,6 +126,36 @@ export function LandlordDashboard({
   onDeleteProperty,
   onBack,
 }: LandlordDashboardProps) {
+  const { userId } = useAppState();
+
+  /** The live tenancy on a property, which is what a call is recorded against. */
+  const tenancyFor = (propertyId: string) =>
+    tenancies.find(
+      t => t.property_id === propertyId && (t.status === "active" || t.status === "pending"),
+    ) ?? null;
+
+  const callTenant = (property: Property) => {
+    const number = property.tenant?.phone;
+    if (!number) return;
+    const tenancy = tenancyFor(property.id);
+    // Recorded, not awaited: writing the entry must not stand between somebody
+    // and a phone call.
+    if (tenancy && userId) {
+      logCall({ tenancyId: tenancy.id, senderId: userId }).catch(() => {
+        /* the call still happens; the entry is the thing that failed */
+      });
+    }
+    window.location.href = `tel:${number.replace(/[^d+]/g, "")}`;
+  };
+
+  const emailTenant = (property: Property) => {
+    const address = property.tenant?.email;
+    if (!address) return;
+    // No record for this one: the mail is written and sent somewhere else
+    // entirely, and Aavas would only know that a mail client was opened.
+    window.location.href = `mailto:${address}?subject=${encodeURIComponent(property.title)}`;
+  };
+
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterStatus, setFilterStatus] = useState<
     "all" | "occupied" | "vacant" | "maintenance"
@@ -555,34 +596,44 @@ export function LandlordDashboard({
                           <div className="flex-1">
                             <p className="text-sm">{property.tenant.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              Lease: {property.tenant.leaseStart} to{" "}
-                              {property.tenant.leaseEnd}
+                              {/* Read "Lease: to" when the tenancy carried no
+                                  dates, which is most of them. */}
+                              {property.tenant.leaseStart && property.tenant.leaseEnd
+                                ? `Lease: ${property.tenant.leaseStart} to ${property.tenant.leaseEnd}`
+                                : property.tenant.email || 'No lease dates recorded'}
                             </p>
                           </div>
                           <div className="flex space-x-2">
                             <Button
-                              aria-label={`Call ${property.tenant?.name}`}
+                              aria-label={
+                                property.tenant?.phone
+                                  ? `Call ${property.tenant?.name}`
+                                  : `${property.tenant?.name} has no phone number`
+                              }
+                              title={
+                                property.tenant?.phone ||
+                                'No phone number on their account yet'
+                              }
                               variant="ghost"
                               size="icon"
+                              disabled={!property.tenant?.phone}
                               className="size-11 sm:size-8 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30"
-                              onClick={() =>
-                                toast.info(
-                                  `Calling ${property.tenant?.name} (This is a demo)`
-                                )
-                              }
+                              onClick={() => callTenant(property)}
                             >
                               <Phone className="w-4 h-4" />
                             </Button>
                             <Button
-                              aria-label={`Email ${property.tenant?.name}`}
+                              aria-label={
+                                property.tenant?.email
+                                  ? `Email ${property.tenant?.name}`
+                                  : `${property.tenant?.name} has no email address`
+                              }
+                              title={property.tenant?.email || 'No email address on file'}
                               variant="ghost"
                               size="icon"
+                              disabled={!property.tenant?.email}
                               className="size-11 sm:size-8 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                              onClick={() =>
-                                toast.info(
-                                  `Emailing ${property.tenant?.name} (This is a demo)`
-                                )
-                              }
+                              onClick={() => emailTenant(property)}
                             >
                               <Mail className="w-4 h-4" />
                             </Button>
