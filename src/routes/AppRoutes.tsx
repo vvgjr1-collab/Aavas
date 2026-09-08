@@ -35,6 +35,19 @@ import { Terms } from '../components/legal/Terms';
 
 import { useAppState, useDisplayUser } from '../context/AppState';
 import { TENANT_PROPERTY_ADDRESS } from '../data/properties';
+import type { TenantPropertyView } from '../lib/tenantView';
+
+/**
+ * The address of the flat this tenant actually rents.
+ *
+ * Three screens took the seed address instead - a constant naming a flat on
+ * Sunset Boulevard - so a tenant filing a complaint, booking a service or
+ * contacting their landlord was shown somebody else's home as their own. The
+ * demo view still carries the seed flat, which is right for a guest.
+ */
+function tenantAddress(view: TenantPropertyView): string {
+  return [view.address, view.city].filter(Boolean).join(', ') || TENANT_PROPERTY_ADDRESS;
+}
 import { toPropertyData } from '../types/property';
 import { MobileTabBar, tabsForPath } from '../components/MobileTabBar';
 import { TenantSetup } from '../components/onboarding/TenantSetup';
@@ -508,6 +521,7 @@ function ServiceBookingRoute() {
   const navigate = useNavigate();
   const { bookingProvider, setBookingProvider } = useAppState();
   const { userName, userEmail } = useDisplayUser();
+  const { view } = useTenancy();
 
   // Reached directly (or after a reload) with no provider chosen.
   if (!bookingProvider) return <Navigate to="/tenant/utilities" replace />;
@@ -517,7 +531,7 @@ function ServiceBookingRoute() {
       provider={bookingProvider}
       userName={userName}
       userEmail={userEmail}
-      propertyAddress={TENANT_PROPERTY_ADDRESS}
+      propertyAddress={tenantAddress(view)}
       onBack={() => navigate('/tenant/utilities')}
       onConfirmBooking={() => {
         setBookingProvider(null);
@@ -530,11 +544,14 @@ function ServiceBookingRoute() {
 function ComplaintRoute() {
   const navigate = useNavigate();
   const { userName, userEmail } = useDisplayUser();
+  const { view } = useTenancy();
   return (
     <ComplaintRegistration
       userName={userName}
       userEmail={userEmail}
-      propertyAddress={TENANT_PROPERTY_ADDRESS}
+      // The seed flat, 123 Sunset Boulevard, was shown to every real tenant
+      // filing a complaint about their own home.
+      propertyAddress={tenantAddress(view)}
       onBack={() => navigate('/tenant')}
     />
   );
@@ -552,7 +569,7 @@ function LandlordContactRoute() {
     <LandlordContact
       userName={userName}
       userEmail={userEmail}
-      propertyAddress={[view.address, view.city].filter(Boolean).join(', ') || TENANT_PROPERTY_ADDRESS}
+      propertyAddress={tenantAddress(view)}
       initialTab={tab}
       tenancyId={myTenancy?.id ?? null}
       viewerId={userId}

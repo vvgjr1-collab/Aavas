@@ -35,79 +35,62 @@ export function UtilityServices({ userName, onBack, onBookService }: UtilityServ
     { id: 'hvac', title: 'HVAC', icon: Wind, color: '#a78bfa' }
   ];
 
+  /**
+   * The trades a tenant can ask for, not a directory of vendors.
+   *
+   * This was six invented companies - Quick Fix Plumbing, 4.8 stars, 127
+   * reviews, a rate of 500-800 an hour and a phone number nobody owns. A
+   * tenant could have rung it. None of them existed, none of the ratings meant
+   * anything, and the booking that reached the landlord named a business that
+   * was never going to turn up.
+   *
+   * Aavas has no vendors and no way to rate one. What it does have is a
+   * request that reaches the landlord, which is the part that was always real.
+   */
   const serviceProviders: ServiceProvider[] = [
     {
-      id: '1',
-      name: 'Quick Fix Plumbing',
+      id: 'plumbing',
+      name: 'Plumbing',
       category: 'plumbing',
-      rating: 4.8,
-      reviews: 127,
-      price: '₹500-800/hr',
-      responseTime: '1-2 hours',
-      phone: '+91 98765 43210',
-      description: 'Emergency plumbing services available 24/7. Specializing in leak repairs and installations.',
-      services: ['Leak Repair', 'Pipe Installation', 'Drain Cleaning', 'Water Heater Repair']
+      description:
+        'Leaks, blocked drains, taps, water heaters and anything else carrying water.',
+      services: ['Leak repair', 'Drain cleaning', 'Tap or mixer', 'Water heater'],
     },
     {
-      id: '2',
-      name: 'Elite Electrical Solutions',
+      id: 'electrical',
+      name: 'Electrical',
       category: 'electrical',
-      rating: 4.9,
-      reviews: 89,
-      price: '₹600-1000/hr',
-      responseTime: '2-4 hours',
-      phone: '+91 98765 43211',
-      description: 'Licensed electricians with 15+ years experience. All work guaranteed.',
-      services: ['Outlet Installation', 'Circuit Breaker Repair', 'Lighting Setup', 'Electrical Inspection']
+      description: 'Wiring, sockets, switches, fans, lighting and the meter board.',
+      services: ['Wiring fault', 'Socket or switch', 'Lighting', 'Fan'],
     },
     {
-      id: '3',
-      name: 'Master Carpentry Works',
+      id: 'carpentry',
+      name: 'Carpentry',
       category: 'carpentry',
-      rating: 4.7,
-      reviews: 156,
-      price: '₹400-700/hr',
-      responseTime: '4-6 hours',
-      phone: '+91 98765 43212',
-      description: 'Custom carpentry and repair services. From furniture to structural work.',
-      services: ['Furniture Repair', 'Cabinet Installation', 'Door Repair', 'Custom Shelving']
+      description: 'Doors, windows, locks, cupboards and fitted furniture.',
+      services: ['Door or lock', 'Window', 'Cupboard', 'Fitted furniture'],
     },
     {
-      id: '4',
-      name: 'SafeHome Pest Control',
+      id: 'pest',
+      name: 'Pest control',
       category: 'pest',
-      rating: 4.6,
-      reviews: 203,
-      price: '₹800-1500/visit',
-      responseTime: 'Same day',
-      phone: '+91 98765 43213',
-      description: 'Eco-friendly pest control solutions. Safe for families and pets.',
-      services: ['Ant Control', 'Rodent Removal', 'Termite Treatment', 'General Extermination']
+      description: 'Cockroaches, termites, rodents and mosquito treatment.',
+      services: ['Cockroaches', 'Termites', 'Rodents', 'Mosquitoes'],
     },
     {
-      id: '5',
-      name: 'Pro HVAC Services',
+      id: 'hvac',
+      name: 'Air conditioning and ventilation',
       category: 'hvac',
-      rating: 4.8,
-      reviews: 94,
-      price: '₹650-950/hr',
-      responseTime: '2-3 hours',
-      phone: '+91 98765 43214',
-      description: 'Heating and cooling experts. Emergency services available.',
-      services: ['AC Repair', 'Heating Repair', 'Duct Cleaning', 'System Installation']
+      description: 'Servicing, gas refill, water leaking from a unit, exhaust fans.',
+      services: ['AC service', 'Gas refill', 'Leaking unit', 'Exhaust fan'],
     },
     {
-      id: '6',
-      name: 'Reliable Plumbers Plus',
-      category: 'plumbing',
-      rating: 4.7,
-      reviews: 178,
-      price: '₹450-750/hr',
-      responseTime: '1-3 hours',
-      phone: '+91 98765 43215',
-      description: 'Full-service plumbing with upfront pricing. No hidden fees.',
-      services: ['Emergency Repairs', 'Toilet Repair', 'Faucet Installation', 'Sewer Cleaning']
-    }
+      id: 'other',
+      name: 'Something else',
+      category: 'all',
+      description: 'Anything the trades above do not cover. Describe it and it reaches your landlord.',
+      services: [],
+    },
   ];
 
   const filteredProviders = selectedCategory === 'all' 
@@ -230,15 +213,7 @@ export function UtilityServices({ userName, onBack, onBookService }: UtilityServ
                         <CardTitle className="text-lg" style={{ color: 'var(--tenant-primary)' }}>
                           {provider.name}
                         </CardTitle>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <div className="flex items-center space-x-1">
-                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm">{provider.rating}</span>
-                            <span className="text-xs text-muted-foreground">
-                              ({provider.reviews} reviews)
-                            </span>
-                          </div>
-                        </div>
+
                       </div>
                     </div>
                   </div>
@@ -249,23 +224,11 @@ export function UtilityServices({ userName, onBack, onBookService }: UtilityServ
                     {provider.description}
                   </p>
 
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <IndianRupee className="w-4 h-4" style={{ color: 'var(--tenant-success-dark)' }} />
-                      <span>{provider.price}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4" style={{ color: 'var(--tenant-primary)' }} />
-                      <span>{provider.responseTime}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Phone className="w-4 h-4 text-purple-600" />
-                      <span>{provider.phone}</span>
-                    </div>
-                  </div>
+                  {/* A rate, a response time and a phone number stood here.
+                      Aavas arranges nothing and knows none of them. */}
 
                   <div>
-                    <p className="text-xs text-muted-foreground mb-2">Services offered:</p>
+                    <p className="text-xs text-muted-foreground mb-2">Common jobs:</p>
                     <div className="flex flex-wrap gap-1">
                       {provider.services.slice(0, 3).map((service) => (
                         <Badge key={service} variant="secondary" className="text-xs">

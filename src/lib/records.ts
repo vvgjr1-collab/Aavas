@@ -188,9 +188,14 @@ export interface DbDocument {
   size_bytes: number;
   uploaded_by: string;
   created_at: string;
+  /** Set when the file is evidence for one complaint. */
+  complaint_id: string | null;
 }
 
 export const DOCUMENTS_BUCKET = 'documents';
+
+const DOCUMENT_COLUMNS =
+  'id, tenancy_id, complaint_id, kind, storage_path, file_name, mime_type, size_bytes, uploaded_by, created_at';
 
 /**
  * Objects are filed as tenancies/<id>/<kind>/<file> because that is what the
@@ -209,7 +214,7 @@ export async function listDocuments(
   if (!supabase) return [];
   let query = supabase
     .from('documents')
-    .select('id, tenancy_id, kind, storage_path, file_name, mime_type, size_bytes, uploaded_by, created_at')
+    .select(DOCUMENT_COLUMNS)
     .eq('tenancy_id', tenancyId);
   if (kind) query = query.eq('kind', kind);
   const { data, error } = await query.order('created_at', { ascending: false });
@@ -223,6 +228,8 @@ export async function uploadDocument(input: {
   userId: string;
   kind: string;
   file: File;
+  /** Set when the file is evidence for one complaint rather than the tenancy. */
+  complaintId?: string | null;
 }): Promise<DbDocument> {
   const client = requireSupabase();
   const path = documentPath(input.tenancyId, input.kind, input.file.name);
@@ -242,8 +249,9 @@ export async function uploadDocument(input: {
       file_name: input.file.name,
       mime_type: input.file.type,
       size_bytes: input.file.size,
+      complaint_id: input.complaintId ?? null,
     })
-    .select('id, tenancy_id, kind, storage_path, file_name, mime_type, size_bytes, uploaded_by, created_at')
+    .select(DOCUMENT_COLUMNS)
     .single();
 
   if (error) {
@@ -309,6 +317,8 @@ export const DOCUMENT_KINDS = [
 ] as const;
 
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
+
+export const PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic';
 
 export const DOCUMENT_ACCEPT =
   'application/pdf,image/jpeg,image/png,image/webp,image/heic';

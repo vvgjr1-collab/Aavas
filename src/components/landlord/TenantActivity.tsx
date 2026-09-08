@@ -9,8 +9,11 @@ import { supabase } from '../../lib/supabase';
 import {
   listBookings,
   listComplaints,
+  listDocuments,
+  signedDocumentUrl,
   type DbBooking,
   type DbComplaint,
+  type DbDocument,
 } from '../../lib/records';
 import type { DbTenancy } from '../../lib/tenancy';
 
@@ -47,18 +50,33 @@ export function TenantActivity({ tenancy }: { tenancy: DbTenancy | null }) {
   const [bookings, setBookings] = useState<DbBooking[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<Record<string, DbDocument[]>>({});
 
   const load = useCallback(() => {
     if (!tenancy) {
       setComplaints([]);
       setBookings([]);
+      setPhotos({});
       return;
     }
     setLoading(true);
-    Promise.all([listComplaints(tenancy.id), listBookings(tenancy.id)])
-      .then(([c, b]) => {
+    Promise.all([
+      listComplaints(tenancy.id),
+      listBookings(tenancy.id),
+      // The pictures the tenant attached. Grouped by complaint so each one
+      // shows beside the words it illustrates - a photo of a damp patch is
+      // most of what a maintenance complaint is.
+      listDocuments(tenancy.id, 'complaint_photo'),
+    ])
+      .then(([c, b, docs]) => {
         setComplaints(c);
         setBookings(b);
+        const byComplaint: Record<string, DbDocument[]> = {};
+        for (const d of docs) {
+          if (!d.complaint_id) continue;
+          (byComplaint[d.complaint_id] ??= []).push(d);
+        }
+        setPhotos(byComplaint);
       })
       .catch(() => {
         /* the panel stays empty rather than breaking the page */
@@ -89,6 +107,17 @@ export function TenantActivity({ tenancy }: { tenancy: DbTenancy | null }) {
         }
         setBusyId(null);
       });
+  };
+
+  /** The bucket is private, so a photo opens through a short-lived link. */
+  const openPhoto = (photo: DbDocument) => {
+    signedDocumentUrl(photo.storage_path)
+      .then(url => window.open(url, '_blank', 'noopener,noreferrer'))
+      .catch(err =>
+        toast.error('Could not open that photo', {
+          description: err instanceof Error ? err.message : 'Please try again.',
+        }),
+      );
   };
 
   const openCount = complaints.filter(c => c.status === 'open').length;
@@ -175,6 +204,21 @@ export function TenantActivity({ tenancy }: { tenancy: DbTenancy | null }) {
                         <p className="mt-1 text-xs text-muted-foreground">
                           Reported {day(c.created_at)}
                         </p>
+
+                        {(photos[c.id] ?? []).length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {(photos[c.id] ?? []).map(photo => (
+                              <button
+                                key={photo.id}
+                                type="button"
+                                onClick={() => openPhoto(photo)}
+                                className="rounded-lg border border-[var(--hairline)] px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                              >
+                                {photo.file_name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {c.status !== 'resolved' && c.status !== 'closed' && (

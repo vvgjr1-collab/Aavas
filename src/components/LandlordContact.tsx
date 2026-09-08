@@ -71,14 +71,8 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
   };
   const hasPhone = Boolean(landlordData.phone && landlordData.phone.trim());
 
-  // Mock contact history
 
 
-  const formatCallDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   /**
    * Actually dial.

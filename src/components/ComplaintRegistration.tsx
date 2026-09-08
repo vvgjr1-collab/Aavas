@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useTenancy } from '../context/TenancyProvider';
 import { useAppState } from '../context/AppState';
-import { createComplaint } from '../lib/records';
+import { PHOTO_ACCEPT, createComplaint, rejectDocument, uploadDocument } from '../lib/records';
 import { motion } from 'motion/react';
 import { 
   ArrowLeft,
@@ -49,7 +49,8 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
   const [priority, setPriority] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [pendingPhotos, setPendingPhotos] = useState<File[]>([]);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const { myTenancy, refresh } = useTenancy();
   const { userId } = useAppState();
@@ -120,10 +121,24 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
     { value: 'urgent', label: 'Urgent', color: 'rgba(217, 83, 79, 0.2)', textColor: 'var(--tenant-error)' }
   ];
 
-  const handleFileUpload = () => {
-    // Simulate file upload
-    const newFile = `photo_${Date.now()}.jpg`;
-    setUploadedFiles([...uploadedFiles, newFile]);
+  /**
+   * Hold the chosen pictures until the complaint exists.
+   *
+   * This used to invent a filename - photo_1757340000000.jpg - and push it into
+   * a list. No file was read and nothing was uploaded, so a tenant
+   * photographing a damp patch sent nobody a picture. The files are kept here
+   * and uploaded once there is a complaint id to attach them to.
+   */
+  const handleFileUpload = (files: FileList | null) => {
+    if (!files?.length) return;
+    const chosen = Array.from(files);
+    const bad = chosen.map(rejectDocument).find(Boolean);
+    if (bad) {
+      toast.error('That file cannot be used', { description: bad });
+      return;
+    }
+    setPendingPhotos(prev => [...prev, ...chosen]);
+    if (fileInput.current) fileInput.current.value = '';
   };
 
   const handleSubmitComplaint = () => {
@@ -147,7 +162,29 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
       description: description.trim(),
       priority,
     })
-      .then(() => {
+      .then(async complaint => {
+        // Uploaded after the complaint exists, because each picture records
+        // which complaint it is evidence for. A photo that fails does not undo
+        // the complaint - the words are the part that matters.
+        const failed: string[] = [];
+        for (const file of pendingPhotos) {
+          try {
+            await uploadDocument({
+              tenancyId: myTenancy.id,
+              userId,
+              kind: 'complaint_photo',
+              complaintId: complaint.id,
+              file,
+            });
+          } catch {
+            failed.push(file.name);
+          }
+        }
+        if (failed.length > 0) {
+          toast.error('Some photos did not upload', {
+            description: `${failed.join(', ')}. The complaint itself was filed.`,
+          });
+        }
         setIsSubmitted(true);
         refresh();
         window.setTimeout(onBack, 3000);
@@ -160,8 +197,8 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
       .finally(() => setIsSaving(false));
   };
 
-  const removeFile = (fileToRemove: string) => {
-    setUploadedFiles(uploadedFiles.filter(file => file !== fileToRemove));
+  const removeFile = (file: File) => {
+    setPendingPhotos(prev => prev.filter(f => f !== file));
   };
 
   if (isSubmitted) {
@@ -392,21 +429,35 @@ export function ComplaintRegistration({ userName, userEmail, propertyAddress, on
                     </p>
                     <Button
                       variant="outline"
-                      onClick={handleFileUpload}
+                      onClick={() => fileInput.current?.click()}
                       style={{ borderColor: 'var(--tenant-primary)', color: 'var(--tenant-primary)' }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(74, 189, 172, 0.1)'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       Choose Files
                     </Button>
+                    <input
+                      ref={fileInput}
+                      type="file"
+                      accept={PHOTO_ACCEPT}
+                      multiple
+                      hidden
+                      onChange={(e) => handleFileUpload(e.target.files)}
+                    />
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Your landlord sees these with the complaint. Images up to
+                      10 MB, kept private to the two of you.
+                    </p>
                   </div>
                   
-                  {uploadedFiles.length > 0 && (
+                  {pendingPhotos.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-sm" style={{ color: 'var(--tenant-primary)' }}>Uploaded Files:</p>
-                      {uploadedFiles.map((file, index) => (
+                      <p className="text-sm" style={{ color: 'var(--tenant-primary)' }}>
+                        Attached, and sent when you file this:
+                      </p>
+                      {pendingPhotos.map((file, index) => (
                         <div key={index} className="flex items-center justify-between p-2 rounded" style={{ backgroundColor: 'rgba(74, 189, 172, 0.1)' }}>
-                          <span className="text-sm">{file}</span>
+                          <span className="text-sm">{file.name}</span>
                           <Button
                             variant="ghost"
                             size="sm"

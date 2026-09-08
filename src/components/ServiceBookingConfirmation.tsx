@@ -47,15 +47,28 @@ export function ServiceBookingConfirmation({
   const [description, setDescription] = useState<string>('');
   const [isBookingConfirmed, setIsBookingConfirmed] = useState<boolean>(false);
 
-  // Mock available time slots for the next few days
-  const timeSlots = [
-    { id: '1', date: 'Today', time: '2:00 PM - 4:00 PM', available: true },
-    { id: '2', date: 'Today', time: '4:00 PM - 6:00 PM', available: false },
-    { id: '3', date: 'Tomorrow', time: '9:00 AM - 11:00 AM', available: true },
-    { id: '4', date: 'Tomorrow', time: '1:00 PM - 3:00 PM', available: true },
-    { id: '5', date: 'Dec 24', time: '10:00 AM - 12:00 PM', available: true },
-    { id: '6', date: 'Dec 24', time: '2:00 PM - 4:00 PM', available: true }
-  ];
+  /**
+   * When the tenant would like somebody to come.
+   *
+   * These were fixed strings - "Dec 24", and one slot marked unavailable by an
+   * app with no calendar to be unavailable in. They are windows over the next
+   * few real days now, and none of them claims to be booked or free, because
+   * nobody has been asked yet.
+   */
+  const timeSlots = (() => {
+    const windows = ['9:00 AM - 11:00 AM', '11:00 AM - 1:00 PM', '2:00 PM - 4:00 PM', '4:00 PM - 6:00 PM'];
+    const out: { id: string; date: string; time: string; available: boolean }[] = [];
+    for (let d = 0; d < 3; d++) {
+      const when = new Date();
+      when.setDate(when.getDate() + d);
+      const label =
+        d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : when.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+      for (const time of windows) {
+        out.push({ id: `${d}-${time}`, date: label, time, available: true });
+      }
+    }
+    return out;
+  })();
 
   const handleConfirmBooking = () => {
     if (!selectedTimeSlot || !selectedService) return;
@@ -125,7 +138,8 @@ export function ServiceBookingConfirmation({
 
             <div className="mt-6 space-y-3">
               <p className="text-sm text-muted-foreground">
-                You will receive a confirmation call within {provider.responseTime}.
+                Your landlord can see this request. Nothing is booked with a
+                tradesperson yet &mdash; Aavas does not arrange the work.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Button
@@ -191,33 +205,17 @@ export function ServiceBookingConfirmation({
             <CardContent className="space-y-4">
               <div>
                 <h3 className="text-lg">{provider.name}</h3>
-                <div className="flex items-center space-x-2 mt-1">
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm">{provider.rating}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({provider.reviews} reviews)
-                    </span>
-                  </div>
-                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {provider.description}
+                </p>
               </div>
 
               <Separator />
 
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center space-x-2">
-                  <IndianRupee className="w-4 h-4" style={{ color: 'var(--tenant-success-dark)' }} />
-                  <span>{provider.price}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4" style={{ color: 'var(--tenant-primary)' }} />
-                  <span>Response time: {provider.responseTime}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Phone className="w-4 h-4 text-purple-600" />
-                  <span>{provider.phone}</span>
-                </div>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                What this does: it tells your landlord what you need and when
+                suits you. Cost and who turns up are between the two of you.
+              </p>
 
               <Separator />
 
