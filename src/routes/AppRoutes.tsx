@@ -723,11 +723,58 @@ export function AppRoutes() {
             </RequireSetup>
           }
         />
-        <Route path="/tenant/rent" element={<RentDetailsRoute />} />
-        <Route path="/tenant/utilities" element={<UtilityServicesRoute />} />
-        <Route path="/tenant/utilities/book" element={<ServiceBookingRoute />} />
-        <Route path="/tenant/complaint" element={<ComplaintRoute />} />
-        <Route path="/tenant/landlord-contact" element={<LandlordContactRoute />} />
+        {/*
+          Gated for the same reason the dashboard is, and it was not.
+          Only /tenant carried the gate, so a signed-in account with no
+          tenancy could reach every other tenant screen - one tap away on
+          the mobile tab bar - and each of them falls back to the demo flat
+          when there is no tenancy to read. Somebody with no tenancy was
+          shown Sarah Johnson's rent, her agreement and her landlord, laid
+          out as their own.
+
+          A guest is unaffected: the demo is what a guest is here for, and
+          needsTenantSetup is only ever true for a real account.
+        */}
+        <Route
+          path="/tenant/rent"
+          element={
+            <RequireSetup need="tenant" to="/tenant/setup">
+              <RentDetailsRoute />
+            </RequireSetup>
+          }
+        />
+        <Route
+          path="/tenant/utilities"
+          element={
+            <RequireSetup need="tenant" to="/tenant/setup">
+              <UtilityServicesRoute />
+            </RequireSetup>
+          }
+        />
+        <Route
+          path="/tenant/utilities/book"
+          element={
+            <RequireSetup need="tenant" to="/tenant/setup">
+              <ServiceBookingRoute />
+            </RequireSetup>
+          }
+        />
+        <Route
+          path="/tenant/complaint"
+          element={
+            <RequireSetup need="tenant" to="/tenant/setup">
+              <ComplaintRoute />
+            </RequireSetup>
+          }
+        />
+        <Route
+          path="/tenant/landlord-contact"
+          element={
+            <RequireSetup need="tenant" to="/tenant/setup">
+              <LandlordContactRoute />
+            </RequireSetup>
+          }
+        />
 
         <Route path="/landlord/setup" element={<LandlordSetupRoute />} />
         <Route

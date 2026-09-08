@@ -38,6 +38,10 @@ const LANDLORD_TABS: TabItem[] = [
 ];
 
 export function tabsForPath(pathname: string): TabItem[] | null {
+  // Onboarding has one job. Every tab here would bounce straight back to it
+  // until there is a tenancy or a property, and a row of controls that all
+  // return you to where you already are is worse than no row at all.
+  if (pathname === '/tenant/setup' || pathname === '/landlord/setup') return null;
   if (pathname.startsWith('/tenant')) return TENANT_TABS;
   if (pathname.startsWith('/landlord')) return LANDLORD_TABS;
   return null;
