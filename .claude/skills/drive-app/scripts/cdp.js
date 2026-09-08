@@ -79,11 +79,25 @@ async function connect({ port = DEFAULT_PORT, timeoutMs = 10000 } = {}) {
    * friends activate on mousedown/focus and define no onClick, so a synthetic
    * click() does nothing.
    */
+  /**
+   * Click by dispatching a real mouse event at the element's coordinates.
+   *
+   * Scrolls it into view first: the event is dispatched at viewport
+   * coordinates, so an element below the fold gets a click delivered to
+   * whatever happens to be at that point - or to nothing at all. That failure
+   * is silent and reads as "the button did nothing", which is a lie about the
+   * app that only shows up when a page grows.
+   */
   const mouseClick = async (selector, settleMs = 700) => {
     const box = await evaluate(`(() => {
       const el = document.querySelector(${JSON.stringify(selector)});
       if (!el) return null;
+      // 'instant' matters: the app sets scroll-behavior: smooth, so the
+      // default would animate and the rectangle read below would still be the
+      // old one.
+      el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
       const r = el.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) return null;
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     })()`);
     if (!box) return false;
