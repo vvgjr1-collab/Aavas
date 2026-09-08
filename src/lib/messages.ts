@@ -8,16 +8,20 @@ import { requireSupabase, supabase } from './supabase';
  * one flatmate miss what the other was told.
  */
 
+export type MessageKind = 'text' | 'call';
+
 export interface DbMessage {
   id: string;
   tenancy_id: string;
   sender_id: string;
+  /** Empty for a call: there are no words in one. */
   body: string;
+  kind: MessageKind;
   created_at: string;
   read_at: string | null;
 }
 
-const COLUMNS = 'id, tenancy_id, sender_id, body, created_at, read_at';
+const COLUMNS = 'id, tenancy_id, sender_id, body, kind, created_at, read_at';
 
 export const MAX_MESSAGE_LENGTH = 4000;
 
@@ -46,7 +50,34 @@ export async function sendMessage(input: {
 
   const { data, error } = await client
     .from('messages')
-    .insert({ tenancy_id: input.tenancyId, sender_id: input.senderId, body })
+    .insert({ tenancy_id: input.tenancyId, sender_id: input.senderId, body, kind: 'text' })
+    .select(COLUMNS)
+    .single();
+  if (error) throw new Error(error.message);
+  return data as DbMessage;
+}
+
+/**
+ * Record that a call was placed from the app.
+ *
+ * Deliberately records less than the screen it replaces claimed to know. The
+ * browser hands a number to the phone and hears nothing back, so whether it
+ * connected, who answered and how long it ran are all unknowable here - and
+ * the old screen displayed all three.
+ */
+export async function logCall(input: {
+  tenancyId: string;
+  senderId: string;
+}): Promise<DbMessage> {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('messages')
+    .insert({
+      tenancy_id: input.tenancyId,
+      sender_id: input.senderId,
+      body: '',
+      kind: 'call',
+    })
     .select(COLUMNS)
     .single();
   if (error) throw new Error(error.message);
@@ -67,6 +98,11 @@ export async function markRead(tenancyId: string, viewerId: string): Promise<voi
     .eq('tenancy_id', tenancyId)
     .neq('sender_id', viewerId)
     .is('read_at', null);
+}
+
+/** Everything said and every call placed, oldest first. */
+export async function listHistory(tenancyId: string): Promise<DbMessage[]> {
+  return listMessages(tenancyId);
 }
 
 /** How many the viewer has not seen. */

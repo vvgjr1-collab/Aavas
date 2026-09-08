@@ -38,6 +38,8 @@ import { useAppState } from '../context/AppState';
 import { PropertyEditor } from './landlord/PropertyEditor';
 import { EndNotice } from './tenancy/EndNotice';
 import { Conversation } from './chat/Conversation';
+import { CommunicationHistory } from './chat/CommunicationHistory';
+import { logCall } from '../lib/messages';
 import { DocumentsPanel } from './documents/DocumentsPanel';
 import { usePayments } from '../hooks/usePayments';
 import { useMembers } from '../hooks/useMembers';
@@ -91,7 +93,25 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
     ) ?? null;
 
   const { payments } = usePayments(tenancy?.id);
+
+
+  /**
+   * Call the tenant, and record that it happened.
+   *
+   * Same shape as the tenant's side, so the record reads the same whichever of
+   * them placed the call. Not awaited: writing the entry must not stand
+   * between somebody and a phone call.
+   */
+  const callTenant = () => {
+    if (!tenantPhone || !tenancy || !userId) return;
+    logCall({ tenancyId: tenancy.id, senderId: userId }).catch(() => {
+      /* the call still happens; the entry is the thing that failed */
+    });
+    window.location.href = `tel:${tenantPhone.replace(/[^\d+]/g, '')}`;
+  };
   const { members } = useMembers(tenancy?.id);
+
+  const tenantPhone = members[0]?.phone ?? '';
 
   const [activeTab, setActiveTab] = useState('tenant');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -534,20 +554,52 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
             </div>
           </DialogHeader>
 
-          {/* One real thread per tenancy, shared with the tenant's screen. */}
-          <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
-            <Conversation
-              tenancyId={tenancy?.id ?? null}
-              viewerId={userId}
-              counterparty={tenant?.full_name ?? 'Your tenant'}
-              disabled={
-                tenancy
-                  ? undefined
-                  : 'Nobody has joined this property yet, so there is nobody to message.'
-              }
-              emptyHint="No messages yet. Anything you send appears on your tenant's dashboard."
-            />
-          </div>
+          {/* One real thread per tenancy, shared with the tenant's screen,
+              and the record of it alongside. */}
+          <Tabs defaultValue="thread" className="flex min-h-0 flex-1 flex-col px-6 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <TabsList>
+                <TabsTrigger value="thread">Messages</TabsTrigger>
+                <TabsTrigger value="record">History</TabsTrigger>
+              </TabsList>
+              {tenancy && tenantPhone && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-11 rounded-full sm:h-9"
+                  onClick={callTenant}
+                >
+                  <Phone className="h-4 w-4" />
+                  Call {tenant?.full_name?.split(' ')[0] ?? 'tenant'}
+                </Button>
+              )}
+            </div>
+
+            <TabsContent value="thread" asChild>
+              <div className="flex min-h-0 flex-1 flex-col">
+                <Conversation
+                  tenancyId={tenancy?.id ?? null}
+                  viewerId={userId}
+                  counterparty={tenant?.full_name ?? 'Your tenant'}
+                  disabled={
+                    tenancy
+                      ? undefined
+                      : 'Nobody has joined this property yet, so there is nobody to message.'
+                  }
+                  emptyHint="No messages yet. Anything you send appears on your tenant's dashboard."
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="record" className="min-h-0 flex-1 overflow-y-auto">
+              <CommunicationHistory
+                tenancyId={tenancy?.id ?? null}
+                viewerId={userId}
+                counterparty={tenant?.full_name ?? 'your tenant'}
+                emptyHint="Nothing yet. Messages and calls placed from Aavas are recorded here."
+              />
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 

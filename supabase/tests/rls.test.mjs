@@ -564,6 +564,62 @@ const main = async () => {
     }),
   );
 
+  const callEntry = await asUser(db, tenantA, async () => {
+    const r = await db.query(
+      "insert into public.messages (tenancy_id, sender_id, body, kind) values ($1, $2, '', 'call') returning id",
+      [tenancyA, tenantA],
+    );
+    return r.rows[0].id;
+  });
+  check('a call can be recorded', typeof callEntry, 'string');
+
+  const bothKinds = await asUser(db, landlordA, async () => {
+    const r = await db.query(
+      'select kind, count(*)::int as n from public.messages where tenancy_id = $1 group by kind order by kind',
+      [tenancyA],
+    );
+    return r.rows.map(x => x.kind + ':' + x.n);
+  });
+  // Ordered by the enum, which lists text first.
+  check('and sits in the same record as the texts', bothKinds, ['text:1', 'call:1']);
+
+  checkDenied(
+    'a call entry cannot carry words nobody said',
+    await expectDenied(db, tenantA, () =>
+      db.query(
+        "insert into public.messages (tenancy_id, sender_id, body, kind) values ($1, $2, 'we agreed on the phone', 'call')",
+        [tenancyA, tenantA],
+      ),
+    ),
+  );
+
+  checkDenied(
+    'and a text still cannot be empty',
+    await expectDenied(db, tenantA, () =>
+      db.query(
+        "insert into public.messages (tenancy_id, sender_id, body, kind) values ($1, $2, '', 'text')",
+        [tenancyA, tenantA],
+      ),
+    ),
+  );
+
+  checkDenied(
+    'a call cannot be relabelled as a message afterwards',
+    await expectDenied(db, landlordA, () =>
+      db.query("update public.messages set kind = 'text' where id = $1", [callEntry]),
+    ),
+  );
+
+  checkDenied(
+    'a call entry cannot be deleted either',
+    await expectDenied(db, landlordA, async () => {
+      const r = await db.query('delete from public.messages where id = $1 returning id', [callEntry]);
+      if (r.rows.length === 0) throw new Error('no rows deleted (RLS filtered them)');
+      return r;
+    }),
+  );
+
+
   checkDenied(
     'a message cannot be deleted at all',
     // A delete with no policy matches no rows rather than raising, which reads

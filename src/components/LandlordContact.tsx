@@ -27,6 +27,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Conversation } from './chat/Conversation';
+import { CommunicationHistory } from './chat/CommunicationHistory';
+import { logCall } from '../lib/messages';
 import { toast } from 'sonner';
 
 interface LandlordContactProps {
@@ -88,6 +90,11 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
    */
   const handleCall = () => {
     if (!hasPhone) return;
+    if (tenancyId && viewerId) {
+      logCall({ tenancyId, senderId: viewerId }).catch(() => {
+        /* the call still happens; the entry is the thing that failed */
+      });
+    }
     window.location.href = `tel:${landlordData.phone.replace(/[^\d+]/g, '')}`;
   };
 
@@ -168,8 +175,9 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                 >
                   {[
                     { id: 'call', icon: Phone, label: 'Call' },
-                    // No separate history: the thread is the history.
                     { id: 'message', icon: MessageSquare, label: 'Text' },
+                    // The record of both, which is what History means now.
+                    { id: 'history', icon: Clock, label: 'History' },
                   ].map((tab) => {
                     const IconComponent = tab.icon;
                     return (
@@ -243,6 +251,15 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                       emptyHint="No messages yet. Anything you send appears on your landlord's dashboard."
                     />
                   </div>
+                </TabsContent>
+                <TabsContent value="history">
+                  {/* One repository for both halves of how these two talk. */}
+                  <CommunicationHistory
+                    tenancyId={tenancyId}
+                    viewerId={viewerId}
+                    counterparty={landlordData.name}
+                    emptyHint="Nothing yet. Messages you send and calls you place from Aavas are recorded here."
+                  />
                 </TabsContent>
               </CardContent>
             </Card>

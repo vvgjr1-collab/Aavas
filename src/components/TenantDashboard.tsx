@@ -692,15 +692,12 @@ export function TenantDashboard({ userName, userEmail, property, onSignOut, onNa
                     backgroundColor: 'color-mix(in srgb, var(--tenant-primary) 6%, var(--card))', 
                     borderColor: 'color-mix(in srgb, var(--tenant-primary) 16%, transparent)',
                   }}
-                  onClick={() => onNavigateToLandlordContact('message')}
+                  onClick={() => onNavigateToLandlordContact('history')}
                 >
                   <Clock className="w-4 h-4 mr-3" style={{ color: 'var(--tenant-primary)' }} />
                   <div className="text-left">
-                    {/* There is no separate history any more: the thread is the
-                        history, so this opens it rather than a tab that no
-                        longer exists. */}
-                    <p className="text-sm" style={{ color: 'var(--tenant-primary)' }}>Message history</p>
-                    <p className="text-xs text-muted-foreground">Everything you and your landlord have said</p>
+                    <p className="text-sm" style={{ color: 'var(--tenant-primary)' }}>Communication record</p>
+                    <p className="text-xs text-muted-foreground">Every message and call, kept permanently</p>
                   </div>
                 </Button>
               </div>
