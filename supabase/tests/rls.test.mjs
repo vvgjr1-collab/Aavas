@@ -990,6 +990,48 @@ const main = async () => {
   const propertySurvives = await db.query('select count(*)::int as n from public.properties where id = $1', [propE]);
   check("the other party's property survives", propertySurvives.rows[0].n, 1);
 
+  // A tenancy row is not the same thing as another person. Listing a flat
+  // opens a pending tenancy before anybody has joined it, and a tenant-first
+  // claim names a landlord who may never sign up. Neither has a second party
+  // to protect, so neither may hold an account shut.
+  const soloLandlord = await createUser(db, 'solo.landlord@example.com', 'Sona Solo');
+  const emptyListing = await asUser(db, soloLandlord, async () => {
+    const prop = await db.query(
+      `insert into public.properties (landlord_id, title, address_line, city, rent, deposit)
+       values ($1, 'Empty Flat', '9 Quiet Lane', 'Pune', 15000, 30000) returning id`,
+      [soloLandlord],
+    );
+    await db.query(
+      `insert into public.tenancies
+         (property_id, landlord_id, source, status, rent, deposit, created_by)
+       values ($1, $2, 'landlord', 'pending', 15000, 30000, $2)`,
+      [prop.rows[0].id, soloLandlord],
+    );
+    const r = await db.query('select count(*)::int as n from public.account_deletion_block()');
+    return r.rows[0].n;
+  });
+  check('a listing nobody has joined does not hold the landlord', emptyListing, 0);
+
+  await asUser(db, soloLandlord, () => db.query('select public.delete_my_account()'));
+  const soloGone = (
+    await db.query('select count(*)::int as n from auth.users where id = $1', [soloLandlord])
+  ).rows[0].n;
+  check('so they can close the account', soloGone, 0);
+
+  const soloTenant = await createUser(db, 'solo.tenant@example.com', 'Tara Solo');
+  const unclaimed = await asUser(db, soloTenant, async () => {
+    await db.query(
+      `insert into public.tenancies
+         (tenant_id, source, status, claimed_address, claimed_landlord_email, created_by)
+       values ($1, 'tenant', 'pending', '4 Nowhere Street, Pune',
+               'never.signed.up@example.com', $1)`,
+      [soloTenant],
+    );
+    const r = await db.query('select count(*)::int as n from public.account_deletion_block()');
+    return r.rows[0].n;
+  });
+  check('nor does a claim against a landlord who never signed up', unclaimed, 0);
+
 
   // --- rotating join codes -------------------------------------------------
   console.log('\nrotating join codes:');
