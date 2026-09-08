@@ -13,7 +13,6 @@ import {
   Calendar,
   PhoneCall,
   MessageCircle,
-  History,
   AlertCircle,
   Mic,
   Image,
@@ -38,91 +37,40 @@ interface LandlordContactProps {
   /** The thread this screen writes to. Null for a guest, or before joining. */
   tenancyId: string | null;
   viewerId: string | null;
-  landlordName: string;
+  /** The actual owner of the property, from their own profile. */
+  landlord: { name: string; phone: string; email: string };
   onBack: () => void;
 }
 
-interface ContactHistory {
-  id: string;
-  type: 'call' | 'text';
-  message?: string;
-  timestamp: string;
-  duration?: string;
-  status: 'completed' | 'missed' | 'sent' | 'delivered' | 'read';
-}
-
-export function LandlordContact({ userName, userEmail, propertyAddress, initialTab, tenancyId, viewerId, landlordName, onBack }: LandlordContactProps) {
+export function LandlordContact({ userName, userEmail, propertyAddress, initialTab, tenancyId, viewerId, landlord, onBack }: LandlordContactProps) {
   const [activeTab, setActiveTab] = useState<'call' | 'message' | 'history'>(initialTab || 'call');
-  const [textMessage, setTextMessage] = useState<string>('');
-  const [isCallActive, setIsCallActive] = useState<boolean>(false);
-  const [callDuration, setCallDuration] = useState<number>(0);
-  const [isSendingMessage, setIsSendingMessage] = useState<boolean>(false);
 
-  // Mock landlord data
+  /**
+   * The landlord, as they actually are.
+   *
+   * This was Sarah Johnson, a phone number nobody owns and an office that does
+   * not exist - on the one screen whose entire purpose is reaching a real
+   * person. A tenant with a burst pipe would have dialled it.
+   *
+   * "Available", "2 minutes ago" and a response time are gone rather than
+   * rewritten: the app has no presence signal and no way to measure how fast
+   * anyone replies, so any value there would be another invention.
+   */
   const landlordData = {
-    name: "Sarah Johnson",
-    phone: "+91 98765 43210",
-    email: "sarah.johnson@properties.com",
-    avatar: "SJ",
-    availability: "Available",
-    lastSeen: "2 minutes ago",
-    responseTime: "Usually responds within 30 minutes"
+    name: landlord.name,
+    phone: landlord.phone,
+    email: landlord.email,
+    avatar: (landlord.name || '?')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(w => w[0].toUpperCase())
+      .join('') || '?',
   };
+  const hasPhone = Boolean(landlordData.phone && landlordData.phone.trim());
 
   // Mock contact history
-  const [contactHistory, setContactHistory] = useState<ContactHistory[]>([
-    {
-      id: '1',
-      type: 'call',
-      timestamp: '2024-11-15 14:30',
-      duration: '5:23',
-      status: 'completed'
-    },
-    {
-      id: '2',
-      type: 'text',
-      message: 'Hi Sarah, just wanted to confirm that the maintenance for the kitchen sink is scheduled for tomorrow at 10 AM. Thanks!',
-      timestamp: '2024-11-14 16:45',
-      status: 'read'
-    },
-    {
-      id: '3',
-      type: 'call',
-      timestamp: '2024-11-12 10:15',
-      duration: '2:15',
-      status: 'completed'
-    },
-    {
-      id: '4',
-      type: 'text',
-      message: 'Thank you for the quick response regarding the AC repair. The technician will be there Monday morning.',
-      timestamp: '2024-11-10 09:30',
-      status: 'delivered'
-    }
-  ]);
 
-  const quickMessages = [
-    "Hi! I need to discuss something about the property.",
-    "Could you please call me when you have a moment?",
-    "Thank you for your quick response!",
-    "I have a maintenance request to discuss.",
-    "When would be a good time to talk?",
-    "Everything is going well with the property."
-  ];
-
-  React.useEffect(() => {
-    let interval: number;
-    if (isCallActive) {
-      interval = window.setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
-    }
-    return () => {
-      if (interval) {
-        window.clearInterval(interval);
-      }
-    };
-  }, [isCallActive]);
 
   const formatCallDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -130,70 +78,17 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  /**
+   * Actually dial.
+   *
+   * This used to start a timer and render a "calling..." screen, under the
+   * line "Opens your phone with the number ready" - which it did not.
+   * A tel: link hands the number to the phone, which is the only thing a web
+   * page can honestly do with it.
+   */
   const handleCall = () => {
-    setIsCallActive(true);
-    setCallDuration(0);
-  };
-
-  const handleEndCall = () => {
-    setIsCallActive(false);
-    // Add to history when call ends
-    const newCall: ContactHistory = {
-      id: Date.now().toString(),
-      type: 'call',
-      timestamp: new Date().toLocaleString('en-IN', { 
-        year: 'numeric', 
-        month: '2-digit', 
-        day: '2-digit', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }),
-      duration: formatCallDuration(callDuration),
-      status: 'completed'
-    };
-    setContactHistory(prev => [newCall, ...prev]);
-    setCallDuration(0);
-  };
-
-  const handleSendMessage = (message: string) => {
-    if (!message.trim()) return;
-    
-    setIsSendingMessage(true);
-    
-    // Add to history
-    const newMessage: ContactHistory = {
-      id: Date.now().toString(),
-      type: 'text',
-      message: message,
-      timestamp: new Date().toLocaleString('en-IN', { 
-        year: 'numeric', 
-        month: '2-digit', 
-        day: '2-digit', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }),
-      status: 'sent'
-    };
-    
-    setContactHistory(prev => [newMessage, ...prev]);
-    setTextMessage('');
-    
-    // Simulate message sending
-    window.setTimeout(() => {
-      setIsSendingMessage(false);
-      // Update status to delivered
-      setContactHistory(prev => 
-        prev.map(item => 
-          item.id === newMessage.id 
-            ? { ...item, status: 'delivered' }
-            : item
-        )
-      );
-    }, 1000);
-  };
-
-  const handleQuickMessage = (message: string) => {
-    setTextMessage(message);
+    if (!hasPhone) return;
+    window.location.href = `tel:${landlordData.phone.replace(/[^\d+]/g, '')}`;
   };
 
   return (
@@ -258,11 +153,9 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                     </CardTitle>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--tenant-success)' }}></div>
-                      <span className="text-sm" style={{ color: 'var(--tenant-success-dark)' }}>
-                        {landlordData.availability}
+                      <span className="text-sm" style={{ color: 'var(--tenant-success-dark)' }}> Property owner
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        • {landlordData.lastSeen}
                       </span>
                     </div>
                   </div>
@@ -275,8 +168,8 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                 >
                   {[
                     { id: 'call', icon: Phone, label: 'Call' },
+                    // No separate history: the thread is the history.
                     { id: 'message', icon: MessageSquare, label: 'Text' },
-                    { id: 'history', icon: History, label: 'History' }
                   ].map((tab) => {
                     const IconComponent = tab.icon;
                     return (
@@ -297,18 +190,25 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                 {/* Call Interface */}
                 <TabsContent value="call">
                   <div className="space-y-6">
-                    {!isCallActive ? (
+                    {true && (
                       <div className="text-center space-y-4">
                         <div className="w-32 h-32 rounded-full flex items-center justify-center mx-auto" style={{ backgroundColor: 'var(--tenant-primary)' }}>
                           <Phone className="w-12 h-12 text-white" />
                         </div>
                         <div>
-                          <p className="text-lg mb-2">Ready to call {landlordData.name}</p>
+                          <p className="text-lg mb-2">
+                            {hasPhone
+                              ? `Ready to call ${landlordData.name}`
+                              : `${landlordData.name} has not added a phone number`}
+                          </p>
                           <p className="text-sm text-muted-foreground mb-4">
-                            {landlordData.phone}
+                            {hasPhone
+                              ? landlordData.phone
+                              : 'Send a message instead - it reaches them either way.'}
                           </p>
                         </div>
                         <Button
+                          disabled={!hasPhone}
                           onClick={handleCall}
                           className="px-8 py-3 text-lg text-white"
                           style={{ backgroundColor: 'var(--tenant-success)' }}
@@ -322,25 +222,6 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                           This will initiate a call through your device
                         </p>
                       </div>
-                    ) : (
-                      <div className="text-center space-y-4">
-                        <div className="w-32 h-32 rounded-full flex items-center justify-center mx-auto" style={{ backgroundColor: 'var(--tenant-success)' }}>
-                          <Phone className="w-12 h-12 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-lg mb-2">Calling {landlordData.name}...</p>
-                          <p className="text-2xl" style={{ color: 'var(--tenant-success-dark)' }}>
-                            {formatCallDuration(callDuration)}
-                          </p>
-                        </div>
-                        <Button
-                          onClick={handleEndCall}
-                          variant="destructive"
-                          className="px-8 py-3 text-lg"
-                        >
-                          End Call
-                        </Button>
-                      </div>
                     )}
                   </div>
 
@@ -353,7 +234,7 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                     <Conversation
                       tenancyId={tenancyId}
                       viewerId={viewerId}
-                      counterparty={landlordName}
+                      counterparty={landlordData.name}
                       disabled={
                         tenancyId
                           ? undefined
@@ -388,7 +269,7 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                   <Phone className="w-4 h-4" style={{ color: 'var(--tenant-primary)' }} />
                   <div>
                     <p className="text-muted-foreground">Phone</p>
-                    <p>{landlordData.phone}</p>
+                    <p>{hasPhone ? landlordData.phone : 'Not provided'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -403,13 +284,6 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                   <div>
                     <p className="text-muted-foreground">Property</p>
                     <p>{propertyAddress}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Clock className="w-4 h-4" style={{ color: 'var(--tenant-primary)' }} />
-                  <div>
-                    <p className="text-muted-foreground">Response Time</p>
-                    <p>{landlordData.responseTime}</p>
                   </div>
                 </div>
               </CardContent>
@@ -433,21 +307,25 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-orange-600">
-                  For urgent emergencies like gas leaks, flooding, or security issues, call immediately:
+                  A gas leak, a fire or a flood is not something to raise with
+                  your landlord first. Call the emergency services.
                 </p>
-                <Button
-                  variant="outline"
-                  className="w-full border-orange-300 text-orange-700"
+                {/* 112 is India's single emergency number, and it is a real
+                    one. What stood here was a button that raised a toast
+                    saying it was a demo - on the control somebody would
+                    press during a gas leak. */}
+                <a
+                  href="tel:112"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-md border text-orange-700"
                   style={{ borderColor: '#fb923c' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(251, 146, 60, 0.1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onClick={() => toast.info('Calling emergency line (This is a demo)')}
                 >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Emergency Line
-                </Button>
+                  <Phone className="w-4 h-4" />
+                  Call 112
+                </a>
                 <p className="text-xs text-muted-foreground">
-                  Available 24/7 for urgent matters only
+                  Aavas does not route this call, and cannot reach anyone on
+                  your behalf. Tell your landlord afterwards using the message
+                  box above, so there is a record of it.
                 </p>
               </CardContent>
             </Card>

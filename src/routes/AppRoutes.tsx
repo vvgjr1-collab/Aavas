@@ -552,11 +552,11 @@ function LandlordContactRoute() {
     <LandlordContact
       userName={userName}
       userEmail={userEmail}
-      propertyAddress={TENANT_PROPERTY_ADDRESS}
+      propertyAddress={[view.address, view.city].filter(Boolean).join(', ') || TENANT_PROPERTY_ADDRESS}
       initialTab={tab}
       tenancyId={myTenancy?.id ?? null}
       viewerId={userId}
-      landlordName={view.owner.name}
+      landlord={view.owner}
       onBack={() => navigate('/tenant')}
     />
   );
