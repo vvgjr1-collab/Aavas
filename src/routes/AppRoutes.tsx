@@ -151,8 +151,44 @@ function PageTransition({ children }: { children: ReactNode }) {
   );
 }
 
+/** Where a signed-in account belongs: its dashboard, or the menu if unchosen. */
+function homeFor(role: 'tenant' | 'landlord' | null): string {
+  if (role === 'tenant') return '/tenant';
+  if (role === 'landlord') return '/landlord';
+  return '/role';
+}
+
+/**
+ * The landing page, and the decision not to show it twice.
+ *
+ * It exists for someone deciding whether to sign up, and it is the only page
+ * outside every gate that carries the privacy and terms links - so it stays.
+ * But it was rendered unconditionally, which meant every returning user, on
+ * every visit, was met with "Create Free Account" for an account they already
+ * had. A bookmark or a home-screen icon points here, so that was most visits.
+ *
+ * Anyone with a session goes where they were going instead. The role has been
+ * persisted on the profile since it was first chosen, so this can send them
+ * the whole way rather than to a menu they have already answered.
+ *
+ * This is also the single place that decision is made: /login and the
+ * catch-all route both come through here rather than each guessing.
+ */
 function HomeRoute() {
   const navigate = useNavigate();
+  const { isAuthenticated, isLoadingSession, isProfileSettled, role } = useAppState();
+
+  // Deciding before the session and profile are read would either flash the
+  // landing page at someone who is signed in, or send them to /role because
+  // their role had not arrived yet.
+  if (isLoadingSession || !isProfileSettled) return null;
+
+  // A confirmation link lands here carrying a code; the effect in AppRoutes
+  // sends it to /welcome, and that must win.
+  if (isAuthenticated && !arrivedWithAuthCode) {
+    return <Navigate to={homeFor(role)} replace />;
+  }
+
   return (
     <PageTransition>
       <HomePage
@@ -220,7 +256,10 @@ function LoginRoute() {
         onSwitchToSignup={() => navigate('/signup')}
         onSubmitCredentials={async input => {
           await signIn(input);
-          navigate('/role');
+          // Not straight to /role: the role is on the profile, which has not
+          // been read back yet at this point. HomeRoute waits for it and
+          // sends a returning account to its own dashboard.
+          navigate('/', { replace: true });
         }}
         onBack={() => navigate('/')}
         onGuestLogin={onGuestLogin}

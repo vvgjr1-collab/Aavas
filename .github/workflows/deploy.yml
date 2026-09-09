@@ -57,6 +57,12 @@ jobs:
       - name: Attention tests
         run: npm run test:attention
 
+      # A receipt is a document someone may file with a tax claim. Which
+      # payments may produce one, and the amount written out in lakh and
+      # crore, are both worth pinning where a browser cannot reach them.
+      - name: Rent receipt tests
+        run: npm run test:receipt
+
       - name: Build
         run: npm run build
         env:
