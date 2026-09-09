@@ -42,6 +42,8 @@ interface AppState {
   saveProfile: (changes: { full_name: string; phone: string }) => Promise<void>;
   /** True until the stored session has been checked, so guards do not flash. */
   isLoadingSession: boolean;
+  /** Whether `role` can be trusted yet - see isProfileSettled. */
+  isProfileSettled: boolean;
   /** A guest is a local demo user with no account and no database access. */
   isGuest: boolean;
   /** Signed in against Supabase, as opposed to a guest. */
@@ -117,22 +119,46 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Whose profile the load above has finished for, successfully or not.
+  //
+  // The session is read back before the profile is, so there is a window where
+  // someone is signed in and their role still reads as null. Anything deciding
+  // where to send a person has to wait this out, or a returning account gets
+  // sent to the role menu it answered months ago. A plain boolean would not
+  // do: it is false again before the effect for a newly arrived session has
+  // run, which is the same window seen from the other side.
+  const [profileFor, setProfileFor] = useState<string | null>(null);
+
   // Load the profile whenever the signed-in user changes, creating it if it
   // has gone missing - see ensureProfile.
   useEffect(() => {
     const user = session?.user;
     if (!user) {
       setProfile(null);
+      setProfileFor(null);
       return;
     }
     let active = true;
-    ensureProfile(user).then(next => {
-      if (active) setProfile(next);
-    });
+    ensureProfile(user)
+      .then(next => {
+        if (active) setProfile(next);
+      })
+      .catch((err: Error) =>
+        // Left unset rather than retried here: the screens that need it treat
+        // a missing profile as "no role chosen", which is recoverable, and
+        // writes repair it themselves.
+        console.warn('[aavas] could not load profile:', err.message),
+      )
+      .finally(() => {
+        if (active) setProfileFor(user.id);
+      });
     return () => {
       active = false;
     };
   }, [session?.user?.id]);
+
+  /** Whether `role` can be trusted yet. True when nobody is signed in. */
+  const isProfileSettled = !session?.user || profileFor === session.user.id;
 
   const signUp = useCallback(
     (input: { name: string; email: string; password: string }) => {
@@ -255,6 +281,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       userId: session?.user?.id ?? null,
       role,
       isLoadingSession,
+      isProfileSettled,
       isGuest,
       isAuthenticated: Boolean(session?.user),
       properties,
@@ -276,6 +303,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       saveProfile,
       role,
       isLoadingSession,
+      isProfileSettled,
       isGuest,
       session,
       properties,

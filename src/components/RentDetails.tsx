@@ -21,6 +21,9 @@ import { useTenancy } from '../context/TenancyProvider';
 import { DocumentsPanel } from './documents/DocumentsPanel';
 import { useAppState } from '../context/AppState';
 import { listPayments, type DbPayment } from '../lib/records';
+import { canIssueReceipt, receiptBlock, receiptFor } from '../lib/receipt';
+import { downloadReceipt } from '../lib/receiptPdf';
+import { toast } from 'sonner';
 
 /** Shown to guests, who have no tenancy to read payments from. */
 const DEMO_PAYMENT_HISTORY = [
@@ -106,8 +109,11 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
         status: STATUS_LABEL[p.status] ?? p.status,
         method: p.method || '--',
         dueDate: day(p.due_date),
+        // Kept alongside the formatted row so a receipt is made from the
+        // record rather than re-parsed out of the strings on screen.
+        raw: p as DbPayment | null,
       }))
-    : DEMO_PAYMENT_HISTORY;
+    : DEMO_PAYMENT_HISTORY.map(row => ({ ...row, raw: null as DbPayment | null }));
 
   // Only confirmed receipts count towards the total; a payment the tenant has
   // reported is not money the landlord has acknowledged.
@@ -120,6 +126,43 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
       }
     : { totalPaid: '₹2,70,000', count: 5 };
 
+
+  /**
+   * A receipt for one confirmed payment.
+   *
+   * Every row offers the button rather than hiding or disabling it on the ones
+   * that cannot produce a receipt: a tenant who wants proof of March's rent
+   * needs to be told why there isn't any, and a disabled control fires no
+   * events, so on a phone it can say nothing at all.
+   */
+  const handleReceipt = async (payment: DbPayment | null) => {
+    if (!payment || !myTenancy) {
+      toast.info('Receipts need a real tenancy', {
+        description: 'These are sample rows, so there is no payment to receipt.',
+      });
+      return;
+    }
+    const blocked = receiptBlock(payment);
+    if (blocked) {
+      toast.info('No receipt for this one yet', { description: blocked });
+      return;
+    }
+    try {
+      await downloadReceipt(
+        receiptFor({
+          payment,
+          tenancyId: myTenancy.id,
+          tenantName: userName,
+          landlordName: view.owner.name,
+          propertyAddress: [view.address, view.city].filter(Boolean).join(', '),
+        }),
+      );
+    } catch (err) {
+      toast.error('Could not make the receipt', {
+        description: err instanceof Error ? err.message : 'Please try again.',
+      });
+    }
+  };
 
   const handleViewPDF = async () => {
     const { jsPDF } = await import('jspdf');
@@ -813,9 +856,10 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
                   </div>
                 )}
 
-                {/* Payment history. A six-column table is 656px wide - it only
-                    ever scrolled sideways inside its own container on a phone,
-                    so below md the same rows are stacked as cards instead. */}
+                {/* Payment history. The table is wider than a phone - it only
+                    ever scrolled sideways inside its own container there, so
+                    below md the same rows are stacked as cards instead, each
+                    with its own receipt button. */}
                 <ul className="space-y-3 md:hidden">
                   {paymentHistory.map((payment) => (
                     <li
@@ -848,6 +892,15 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
                           <dd>{payment.method}</dd>
                         </div>
                       </dl>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3 w-full"
+                        onClick={() => handleReceipt(payment.raw)}
+                      >
+                        <Download className="mr-1.5 h-4 w-4" />
+                        Receipt
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -862,6 +915,7 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
                         <TableHead>Method</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Due Date</TableHead>
+                        <TableHead className="text-right">Receipt</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -877,6 +931,21 @@ export function RentDetails({ userName, initialTab = 'agreement', onBack }: Rent
                             </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{payment.dueDate}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={
+                                payment.raw && canIssueReceipt(payment.raw)
+                                  ? ''
+                                  : 'text-muted-foreground'
+                              }
+                              onClick={() => handleReceipt(payment.raw)}
+                            >
+                              <Download className="mr-1.5 h-4 w-4" />
+                              Receipt
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
