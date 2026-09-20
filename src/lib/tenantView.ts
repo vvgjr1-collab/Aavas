@@ -121,7 +121,9 @@ export async function fetchTenantView(
     if (data) {
       owner = {
         name: data.full_name || data.email || 'Your landlord',
-        phone: data.phone || 'Not provided',
+        // Empty rather than a placeholder sentence: the contact screen decides
+        // what to show, and a truthy "Not provided" left the call button live.
+        phone: data.phone || '',
         email: data.email || '--',
       };
     }

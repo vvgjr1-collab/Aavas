@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Conversation } from './chat/Conversation';
 import { CommunicationHistory } from './chat/CommunicationHistory';
 import { logCall } from '../lib/messages';
+import { dialable, openExternal } from '../lib/contact';
 import { toast } from 'sonner';
 
 interface LandlordContactProps {
@@ -69,7 +70,12 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
       .map(w => w[0].toUpperCase())
       .join('') || '?',
   };
-  const hasPhone = Boolean(landlordData.phone && landlordData.phone.trim());
+  // Whether there is a number that can actually be dialled, rather than
+  // merely a non-empty string - see dialable(). A placeholder sentence stored
+  // in this field used to pass, leaving the call button live and dialling
+  // nothing.
+  const dialableNumber = dialable(landlordData.phone);
+  const hasPhone = dialableNumber !== null;
 
 
 
@@ -83,13 +89,13 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
    * page can honestly do with it.
    */
   const handleCall = () => {
-    if (!hasPhone) return;
+    if (!dialableNumber) return;
     if (tenancyId && viewerId) {
       logCall({ tenancyId, senderId: viewerId }).catch(() => {
         /* the call still happens; the entry is the thing that failed */
       });
     }
-    window.location.href = `tel:${landlordData.phone.replace(/[^\d+]/g, '')}`;
+    openExternal(`tel:${dialableNumber}`);
   };
 
   return (

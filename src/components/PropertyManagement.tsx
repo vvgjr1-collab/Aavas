@@ -40,6 +40,8 @@ import { EndNotice } from './tenancy/EndNotice';
 import { Conversation } from './chat/Conversation';
 import { CommunicationHistory } from './chat/CommunicationHistory';
 import { logCall } from '../lib/messages';
+import { dialable, openExternal } from '../lib/contact';
+import { toast } from 'sonner';
 import { DocumentsPanel } from './documents/DocumentsPanel';
 import { usePayments } from '../hooks/usePayments';
 import { useMembers } from '../hooks/useMembers';
@@ -103,11 +105,19 @@ export function PropertyManagement({ property, onBack }: PropertyManagementProps
    * between somebody and a phone call.
    */
   const callTenant = () => {
-    if (!tenantPhone || !tenancy || !userId) return;
-    logCall({ tenancyId: tenancy.id, senderId: userId }).catch(() => {
-      /* the call still happens; the entry is the thing that failed */
-    });
-    window.location.href = `tel:${tenantPhone.replace(/[^\d+]/g, '')}`;
+    const number = dialable(tenantPhone);
+    if (!number) {
+      toast.info('No number to call', {
+        description: 'Your tenant has not added a phone number to their account yet.',
+      });
+      return;
+    }
+    if (tenancy && userId) {
+      logCall({ tenancyId: tenancy.id, senderId: userId }).catch(() => {
+        /* the call still happens; the entry is the thing that failed */
+      });
+    }
+    openExternal(`tel:${number}`);
   };
   const { members } = useMembers(tenancy?.id);
 

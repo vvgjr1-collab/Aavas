@@ -73,6 +73,7 @@ import { ReportedPayments } from "./landlord/ReportedPayments";
 import { EndRequests } from "./landlord/EndRequests";
 import { AccountButton } from "./account/AccountButton";
 import { NeedsAttention } from "./landlord/NeedsAttention";
+import { dialable, mailtoHref, openExternal } from "../lib/contact";
 import type { AttentionItem } from "../lib/attention";
 import { useAppState } from "../context/AppState";
 import { logCall } from "../lib/messages";
@@ -142,8 +143,17 @@ export function LandlordDashboard({
     ) ?? null;
 
   const callTenant = (property: Property) => {
-    const number = property.tenant?.phone;
-    if (!number) return;
+    const number = dialable(property.tenant?.phone);
+    if (!number) {
+      // Saying nothing was the old behaviour, and it is indistinguishable
+      // from the call failing to connect.
+      toast.info("No number to call", {
+        description: property.tenant
+          ? `${property.tenant.name} has not added a phone number to their account yet.`
+          : "There is no tenant on this property yet.",
+      });
+      return;
+    }
     const tenancy = tenancyFor(property.id);
     // Recorded, not awaited: writing the entry must not stand between somebody
     // and a phone call.
@@ -152,15 +162,29 @@ export function LandlordDashboard({
         /* the call still happens; the entry is the thing that failed */
       });
     }
-    window.location.href = `tel:${number.replace(/[^d+]/g, "")}`;
+    openExternal(`tel:${number}`);
   };
 
   const emailTenant = (property: Property) => {
-    const address = property.tenant?.email;
-    if (!address) return;
+    const href = mailtoHref(property.tenant?.email, property.title);
+    if (!href) {
+      toast.info("No address to write to", {
+        description: property.tenant
+          ? `There is no usable email address on ${property.tenant.name}'s account.`
+          : "There is no tenant on this property yet.",
+      });
+      return;
+    }
     // No record for this one: the mail is written and sent somewhere else
     // entirely, and Aavas would only know that a mail client was opened.
-    window.location.href = `mailto:${address}?subject=${encodeURIComponent(property.title)}`;
+    openExternal(href);
+    // A desktop browser with no mail client registered does nothing at all and
+    // reports nothing, which reads as the button being broken. Naming the
+    // address means the press always has a visible result, and leaves
+    // something to copy when nothing opens.
+    toast.success(`Opening your mail app`, {
+      description: `Writing to ${property.tenant?.email}. If nothing opened, your browser has no mail app set up.`,
+    });
   };
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");

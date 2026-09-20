@@ -88,7 +88,11 @@ export async function fetchPortfolio(
           ? {
               name: profile.full_name || profile.email || 'Tenant',
               email: profile.email || '',
-              phone: profile.phone || 'Not provided',
+              // Empty, not "Not provided". The card disables its call button
+              // on a falsy phone, and a placeholder sentence is truthy - so
+              // the button stayed live and dialled the placeholder. What to
+              // show when there is no number is the screen's decision.
+              phone: profile.phone || '',
               leaseStart: day(tenancy.start_date),
               leaseEnd: day(tenancy.end_date),
             }
