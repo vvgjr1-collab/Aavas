@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { motion } from 'motion/react';
 import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from './ui/alert';
 import logoImage from '../assets/9916df943b90f5078a96ced9635c98fd96bc1655.png';
 import { ArrowLeft } from 'lucide-react';
 import { ForgotPasswordDialog } from './auth/ForgotPasswordDialog';
+import { CaptchaField, type CaptchaHandle } from './auth/CaptchaField';
+import { captchaEnabled } from '../lib/captcha';
 import { getRememberMe, setRememberMe } from '../lib/supabase';
 
 interface LoginFormData {
@@ -22,7 +24,11 @@ interface LoginFormData {
 interface LoginFormProps {
   onSwitchToSignup: () => void;
   /** Throws with a message worth showing when the credentials are refused. */
-  onSubmitCredentials: (input: { email: string; password: string }) => Promise<void>;
+  onSubmitCredentials: (input: {
+    email: string;
+    password: string;
+    captchaToken?: string;
+  }) => Promise<void>;
   onBack?: () => void;
   onGuestLogin?: () => void;
 }
@@ -32,6 +38,8 @@ export function LoginForm({ onSwitchToSignup, onSubmitCredentials, onBack, onGue
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captcha = useRef<CaptchaHandle>(null);
 
   const {
     control,
@@ -59,7 +67,11 @@ export function LoginForm({ onSwitchToSignup, onSubmitCredentials, onBack, onGue
       // Recorded before signing in, so the session is written to the store the
       // choice implies rather than being moved there afterwards.
       setRememberMe(data.rememberMe);
-      await onSubmitCredentials({ email: data.email, password: data.password });
+      await onSubmitCredentials({
+        email: data.email,
+        password: data.password,
+        captchaToken: captchaToken ?? undefined,
+      });
       // Navigation is the caller's job; on success this form just unmounts.
     } catch (error) {
       // The message is already phrased for a person - see friendlyAuthError.
@@ -68,6 +80,10 @@ export function LoginForm({ onSwitchToSignup, onSubmitCredentials, onBack, onGue
       );
     } finally {
       setIsLoading(false);
+      // The server spends the token whether or not the password was right, so
+      // a second attempt with the same one is refused for a reason that has
+      // nothing to do with the credentials.
+      captcha.current?.reset();
     }
   };
 
@@ -234,6 +250,8 @@ export function LoginForm({ onSwitchToSignup, onSubmitCredentials, onBack, onGue
               </button>
             </div>
 
+            <CaptchaField ref={captcha} onToken={setCaptchaToken} />
+
             <motion.div
               whileTap={{ scale: 0.98 }}
               className="pt-2"
@@ -241,7 +259,10 @@ export function LoginForm({ onSwitchToSignup, onSubmitCredentials, onBack, onGue
               <Button
                 type="submit"
                 className="w-full relative overflow-hidden transition-all duration-300"
-                disabled={!isValid || isLoading}
+                // Held until the challenge is solved: submitting without a
+                // token only earns a refusal from the server that reads like
+                // the password being wrong.
+                disabled={!isValid || isLoading || (captchaEnabled && !captchaToken)}
               >
                 {isLoading ? (
                   <motion.div

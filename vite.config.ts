@@ -24,21 +24,30 @@
     const api = url ? ` ${url}` : '';
     const socket = url ? ` ${url.replace(/^https:/, 'wss:')}` : '';
 
+    // hCaptcha loads a script, opens the challenge in an iframe and calls
+    // home, so it needs a hole in four directives. The hole is opened only
+    // when a site key is configured: a build with no captcha keeps the tighter
+    // policy, and the widget is one of the things that fails *silently* under
+    // CSP - no error, just a box that never appears.
+    const captcha = env.VITE_HCAPTCHA_SITE_KEY?.trim()
+      ? ' https://hcaptcha.com https://*.hcaptcha.com'
+      : '';
+
     const policy = [
       "default-src 'self'",
       // No inline script is emitted, so this can stay strict - which is what
       // makes the policy worth having at all.
-      "script-src 'self'",
+      `script-src 'self'${captcha}`,
       // Tailwind and the animation library both write inline styles.
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com${captcha}`,
       "font-src 'self' data: https://fonts.gstatic.com",
       `img-src 'self' data: blob: https://images.unsplash.com${api}`,
-      `connect-src 'self' data:${api}${socket}`,
+      `connect-src 'self' data:${api}${socket}${captcha}`,
       "worker-src 'self' blob:",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "frame-src 'none'",
+      captcha ? `frame-src${captcha}` : "frame-src 'none'",
     ].join('; ');
 
     return {

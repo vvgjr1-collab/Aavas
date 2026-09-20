@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2, MailCheck } from 'lucide-react';
 
 import { Alert, AlertDescription } from '../ui/alert';
@@ -14,6 +14,8 @@ import {
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { sendPasswordReset } from '../../lib/auth';
+import { CaptchaField, type CaptchaHandle } from './CaptchaField';
+import { captchaEnabled } from '../../lib/captcha';
 
 const looksLikeEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
@@ -38,6 +40,8 @@ export function ForgotPasswordDialog({
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captcha = useRef<CaptchaHandle>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -55,12 +59,14 @@ export function ForgotPasswordDialog({
     }
     setSending(true);
     try {
-      await sendPasswordReset(email);
+      await sendPasswordReset(email, captchaToken ?? undefined);
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not send the link.');
     } finally {
       setSending(false);
+      // Single use: the server spends it either way.
+      captcha.current?.reset();
     }
   };
 
@@ -114,11 +120,13 @@ export function ForgotPasswordDialog({
               )}
             </div>
 
+            <CaptchaField ref={captcha} onToken={setCaptchaToken} />
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={sending}>
+              <Button type="submit" disabled={sending || (captchaEnabled && !captchaToken)}>
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send reset link'}
               </Button>
             </DialogFooter>

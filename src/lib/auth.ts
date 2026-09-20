@@ -1,6 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js';
 
 import { requireSupabase, supabase } from './supabase';
+import { isMissingCaptchaError } from './captcha';
 
 export interface Profile {
   id: string;
@@ -50,6 +51,13 @@ export function friendlyAuthError(message: string): string {
   if (m.includes('rate limit') || m.includes('too many requests')) {
     return 'Too many attempts. Wait a minute and try again.';
   }
+  // The server wants a captcha token and this build did not send one, which
+  // means the project has captcha protection on and VITE_HCAPTCHA_SITE_KEY is
+  // not set. The raw message reads as though the person failed a check they
+  // were never shown, so say whose problem it is.
+  if (isMissingCaptchaError(m)) {
+    return 'This site is not set up for the captcha its server expects. Nothing is wrong with your details - please report it.';
+  }
   if (m.includes('failed to fetch') || m.includes('networkerror')) {
     return 'Could not reach the server. Check your connection and try again.';
   }
@@ -89,10 +97,11 @@ export function passwordResetRedirect(): string {
  * Succeeds whether or not the address has an account: telling a stranger which
  * emails are registered turns this form into a way to enumerate users.
  */
-export async function sendPasswordReset(email: string): Promise<void> {
+export async function sendPasswordReset(email: string, captchaToken?: string): Promise<void> {
   const client = requireSupabase();
   const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
     redirectTo: passwordResetRedirect(),
+    captchaToken,
   });
   if (error) throw new Error(friendlyAuthError(error.message));
 }
@@ -121,6 +130,7 @@ export async function signUpWithEmail(input: {
   name: string;
   email: string;
   password: string;
+  captchaToken?: string;
 }): Promise<SignUpResult> {
   const client = requireSupabase();
   const { data, error } = await client.auth.signUp({
@@ -130,6 +140,7 @@ export async function signUpWithEmail(input: {
       emailRedirectTo: emailRedirectTo(),
       // Read by the handle_new_user() trigger to seed profiles.full_name.
       data: { full_name: input.name },
+      captchaToken: input.captchaToken,
     },
   });
 
@@ -144,23 +155,25 @@ export async function signUpWithEmail(input: {
 export async function signInWithEmail(input: {
   email: string;
   password: string;
+  captchaToken?: string;
 }): Promise<Session> {
   const client = requireSupabase();
   const { data, error } = await client.auth.signInWithPassword({
     email: input.email,
     password: input.password,
+    options: { captchaToken: input.captchaToken },
   });
   if (error) throw new Error(friendlyAuthError(error.message));
   if (!data.session) throw new Error('Signed in, but no session was returned.');
   return data.session;
 }
 
-export async function resendConfirmation(email: string): Promise<void> {
+export async function resendConfirmation(email: string, captchaToken?: string): Promise<void> {
   const client = requireSupabase();
   const { error } = await client.auth.resend({
     type: 'signup',
     email,
-    options: { emailRedirectTo: emailRedirectTo() },
+    options: { emailRedirectTo: emailRedirectTo(), captchaToken },
   });
   if (error) throw new Error(friendlyAuthError(error.message));
 }
