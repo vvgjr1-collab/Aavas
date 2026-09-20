@@ -75,6 +75,25 @@ jobs:
       - name: Auth storage tests
         run: npm run test:auth-storage
 
+      # Whether this build will show a captcha, said out loud.
+      #
+      # A key that never arrived produces a build that looks completely normal
+      # and silently has no captcha; if the Supabase project has captcha
+      # protection on, that build locks everyone out with an error about
+      # credentials. The one place that can answer "did my key take effect" is
+      # here, so it should not require reading the bundle to find out.
+      - name: Report captcha configuration
+        env:
+          SITE_KEY: ${{ vars.VITE_HCAPTCHA_SITE_KEY || secrets.VITE_HCAPTCHA_SITE_KEY }}
+        run: |
+          if [ -n "$SITE_KEY" ]; then
+            echo "hCaptcha site key found (${#SITE_KEY} chars) - the auth forms will show a captcha."
+            echo "Supabase must have captcha protection ON, with the matching secret."
+          else
+            echo "No hCaptcha site key - the auth forms will show no captcha and send no token."
+            echo "Supabase must have captcha protection OFF, or nobody will be able to sign in."
+          fi
+
       - name: Build
         run: npm run build
         env:
@@ -92,7 +111,13 @@ jobs:
           # widget. The hCaptcha *secret* lives in the Supabase dashboard and
           # belongs nowhere near this file. Unset, the forms show no captcha -
           # which must match the dashboard, or nobody can sign in.
-          VITE_HCAPTCHA_SITE_KEY: ${{ vars.VITE_HCAPTCHA_SITE_KEY }}
+          #
+          # Read from either place. A variable is the right home for a public
+          # value, but "Secrets and variables" puts the two behind one menu and
+          # a site key filed as a secret is an easy mistake that ends with a
+          # build that silently has no captcha - and no way to tell from the
+          # outside which of the two was meant.
+          VITE_HCAPTCHA_SITE_KEY: ${{ vars.VITE_HCAPTCHA_SITE_KEY || secrets.VITE_HCAPTCHA_SITE_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
