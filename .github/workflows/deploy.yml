@@ -69,6 +69,12 @@ jobs:
       - name: Contact link tests
         run: npm run test:contact
 
+      # Which store the session and the PKCE verifier land in. Getting the
+      # verifier wrong breaks password recovery for a whole class of users
+      # and cannot be seen anywhere in the UI.
+      - name: Auth storage tests
+        run: npm run test:auth-storage
+
       - name: Build
         run: npm run build
         env:
