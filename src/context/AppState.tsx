@@ -53,8 +53,13 @@ interface AppState {
   /** Provider chosen on the utilities screen, carried into booking confirmation. */
   bookingProvider: ServiceProvider | null;
 
-  signUp: (input: { name: string; email: string; password: string }) => Promise<SignUpResult>;
-  signIn: (input: { email: string; password: string }) => Promise<void>;
+  signUp: (input: {
+    name: string;
+    email: string;
+    password: string;
+    captchaToken?: string;
+  }) => Promise<SignUpResult>;
+  signIn: (input: { email: string; password: string; captchaToken?: string }) => Promise<void>;
   signInAsGuest: () => void;
   signOut: () => Promise<void>;
   chooseRole: (role: UserRole) => void;
@@ -161,7 +166,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const isProfileSettled = !session?.user || profileFor === session.user.id;
 
   const signUp = useCallback(
-    (input: { name: string; email: string; password: string }) => {
+    (input: {
+      name: string;
+      email: string;
+      password: string;
+      captchaToken?: string;
+    }) => {
       // A new account starts remembered. Without this it would inherit a
       // "false" left behind by someone who signed in here once without
       // ticking the box, and be quietly signed out when the browser closed.
@@ -171,11 +181,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const signIn = useCallback(async (input: { email: string; password: string }) => {
-    const next = await signInWithEmail(input);
-    setSession(next);
-    setIsGuest(false);
-  }, []);
+  const signIn = useCallback(
+    async (input: { email: string; password: string; captchaToken?: string }) => {
+      const next = await signInWithEmail(input);
+      setSession(next);
+      setIsGuest(false);
+    },
+    [],
+  );
 
   const signInAsGuest = useCallback(() => {
     setIsGuest(true);

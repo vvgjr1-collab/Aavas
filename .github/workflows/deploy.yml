@@ -88,6 +88,11 @@ jobs:
           # are configured.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          # Public like the others: it is handed to the browser to render the
+          # widget. The hCaptcha *secret* lives in the Supabase dashboard and
+          # belongs nowhere near this file. Unset, the forms show no captcha -
+          # which must match the dashboard, or nobody can sign in.
+          VITE_HCAPTCHA_SITE_KEY: ${{ vars.VITE_HCAPTCHA_SITE_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

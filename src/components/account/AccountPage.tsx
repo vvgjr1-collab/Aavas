@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowLeft,
@@ -21,6 +21,8 @@ import { Progress } from '../ui/progress';
 import { Separator } from '../ui/separator';
 import { completionFor, looksLikePhone, type Completion } from '../../lib/profileCompletion';
 import { sendPasswordReset } from '../../lib/auth';
+import { CaptchaField, type CaptchaHandle } from '../auth/CaptchaField';
+import { captchaEnabled } from '../../lib/captcha';
 import type { DeletionBlock, Profile } from '../../lib/auth';
 import { DeleteAccount } from './DeleteAccount';
 
@@ -64,6 +66,9 @@ export function AccountPage({
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [resetting, setResetting] = useState(false);
+  const [needsCaptcha, setNeedsCaptcha] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captcha = useRef<CaptchaHandle>(null);
 
   useEffect(() => {
     setName(profile?.full_name ?? '');
@@ -90,10 +95,31 @@ export function AccountPage({
     await onSave({ full_name: name.trim(), phone: phone.trim() });
   };
 
-  const resetPassword = async () => {
+  /**
+   * Ask for the challenge before sending, when there is one to ask for.
+   *
+   * The recovery endpoint is refused without a token just like sign-in is, so
+   * the button reveals the widget and sends once it is solved. With no captcha
+   * configured it sends immediately, as it always did.
+   */
+  const startReset = () => {
+    if (captchaEnabled && !captchaToken) {
+      setNeedsCaptcha(true);
+      return;
+    }
+    void resetPassword();
+  };
+
+  /**
+   * `token` is passed in rather than read from state by the caller that has
+   * just received it: setState does not take effect until the next render, so
+   * sending straight after solving would post the previous token - which is
+   * null the first time, and the server refuses that.
+   */
+  const resetPassword = async (token?: string) => {
     setResetting(true);
     try {
-      await sendPasswordReset(email);
+      await sendPasswordReset(email, token ?? captchaToken ?? undefined);
       toast.success('Check your email', {
         description: 'A link to set a new password is on its way.',
       });
@@ -103,6 +129,9 @@ export function AccountPage({
       });
     } finally {
       setResetting(false);
+      setNeedsCaptcha(false);
+      setCaptchaToken(null);
+      captcha.current?.reset();
     }
   };
 
@@ -254,12 +283,24 @@ export function AccountPage({
               variant="outline"
               className="h-11 rounded-full sm:h-9"
               disabled={resetting}
-              onClick={resetPassword}
+              onClick={startReset}
             >
               {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
               Send reset link
             </Button>
           </div>
+
+          {needsCaptcha && (
+            <CaptchaField
+              ref={captcha}
+              onToken={token => {
+                setCaptchaToken(token);
+                // Solved is the whole confirmation; asking them to press the
+                // button a second time would be asking twice for one decision.
+                if (token) void resetPassword(token);
+              }}
+            />
+          )}
 
           <Separator />
 

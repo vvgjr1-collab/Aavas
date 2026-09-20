@@ -206,3 +206,39 @@ whatever the "remember me" choice - see `rememberAwareStorage` in
 **minimum password length and leaked-password protection** (Authentication →
 Policies) are still at their defaults; the app asks for eight characters with
 mixed case and a digit, and the backend should not be weaker than the form.
+
+## Captcha
+
+Turning on **Authentication → Attack Protection → Enable Captcha protection**
+makes Supabase reject every sign-in, sign-up and password-recovery request
+that arrives without a token. There is no partial state: the moment it is
+enabled, nobody can sign in until the client sends one too. The symptom is
+
+```
+captcha protection: request disallowed (no captcha_token found)
+```
+
+shown against correct credentials, which reads as though the password is
+wrong.
+
+Both halves have to be configured, and they have to be the same hCaptcha
+sitekey pair:
+
+| Value | Where it goes | Public? |
+| --- | --- | --- |
+| hCaptcha **site key** | `VITE_HCAPTCHA_SITE_KEY`, and the repo variable of the same name | Yes - it is handed to the browser |
+| hCaptcha **secret key** | Supabase dashboard only | **No. Never in a VITE_ variable** |
+
+With `VITE_HCAPTCHA_SITE_KEY` unset the forms render no captcha and send no
+token, which is correct for a project with captcha turned off - so the two
+settings must be changed together. Turning it on in the dashboard without
+setting the variable locks everyone out, including you.
+
+The Content-Security-Policy opens up for hCaptcha only when the key is set
+(see `vite.config.ts`). This matters: under CSP the widget fails *silently* -
+no error, just a box that never appears.
+
+To try it without a real key, hCaptcha publishes a test sitekey
+`10000000-ffff-ffff-ffff-000000000001` that always passes. It proves the widget
+renders and the token is sent, but Supabase will still refuse the token unless
+the matching test secret is configured there too.

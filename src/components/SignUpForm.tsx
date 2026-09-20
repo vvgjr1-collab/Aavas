@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { motion } from 'motion/react';
 import { Eye, EyeOff, Lock, Mail, User, UserPlus, ArrowLeft, MailCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { CaptchaField, type CaptchaHandle } from './auth/CaptchaField';
+import { captchaEnabled } from '../lib/captcha';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription } from './ui/alert';
@@ -31,6 +33,7 @@ interface SignUpFormProps {
     name: string;
     email: string;
     password: string;
+    captchaToken?: string;
   }) => Promise<{ signedIn: boolean; email: string }>;
   onBack?: () => void;
   onGuestLogin?: () => void;
@@ -40,6 +43,8 @@ export function SignUpForm({ onSwitchToLogin, onSubmitSignUp, onBack, onGuestLog
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captcha = useRef<CaptchaHandle>(null);
   const [signupError, setSignupError] = useState('');
   // Set once the account exists but the address is unconfirmed. Navigating to
   // the dashboard here would strand the user on a signed-out screen, so the
@@ -74,6 +79,7 @@ export function SignUpForm({ onSwitchToLogin, onSubmitSignUp, onBack, onGuestLog
         name: data.name,
         email: data.email,
         password: data.password,
+        captchaToken: captchaToken ?? undefined,
       });
       // When a session comes back the caller navigates and this unmounts.
       if (!result.signedIn) setAwaitingConfirmation(result.email);
@@ -85,6 +91,8 @@ export function SignUpForm({ onSwitchToLogin, onSubmitSignUp, onBack, onGuestLog
       );
     } finally {
       setIsLoading(false);
+      // Spent on the way in, whether or not the sign-up succeeded.
+      captcha.current?.reset();
     }
   };
 
@@ -414,6 +422,8 @@ export function SignUpForm({ onSwitchToLogin, onSubmitSignUp, onBack, onGuestLog
               </div>
             </div>
 
+            <CaptchaField ref={captcha} onToken={setCaptchaToken} />
+
             <motion.div
               whileTap={{ scale: 0.98 }}
               className="pt-2"
@@ -421,7 +431,7 @@ export function SignUpForm({ onSwitchToLogin, onSubmitSignUp, onBack, onGuestLog
               <Button
                 type="submit"
                 className="w-full relative overflow-hidden transition-all duration-300"
-                disabled={!isValid || isLoading}
+                disabled={!isValid || isLoading || (captchaEnabled && !captchaToken)}
               >
                 {isLoading ? (
                   <motion.div
