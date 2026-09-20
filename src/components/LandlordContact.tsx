@@ -29,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Conversation } from './chat/Conversation';
 import { CommunicationHistory } from './chat/CommunicationHistory';
 import { logCall } from '../lib/messages';
-import { dialable, openExternal } from '../lib/contact';
+import { dialable, mailtoHref, openExternal } from '../lib/contact';
 import { toast } from 'sonner';
 
 interface LandlordContactProps {
@@ -76,6 +76,11 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
   // nothing.
   const dialableNumber = dialable(landlordData.phone);
   const hasPhone = dialableNumber !== null;
+
+  // The landlord's address, ready to write to. The subject names the property
+  // so a landlord with several of them knows which one this is about before
+  // they open it.
+  const mailHref = mailtoHref(landlordData.email, propertyAddress);
 
 
 
@@ -282,18 +287,44 @@ export function LandlordContact({ userName, userEmail, propertyAddress, initialT
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 text-sm">
+                {/* Both of these are the thing itself, not a description of
+                    it, so both do what they look like they should. The phone
+                    goes through handleCall rather than being its own tel:
+                    link - otherwise a call placed from here would be missing
+                    from the communication record that the Call tab writes to. */}
                 <div className="flex items-center space-x-3">
-                  <Phone className="w-4 h-4" style={{ color: 'var(--tenant-primary)' }} />
+                  <Phone className="w-4 h-4 shrink-0" style={{ color: 'var(--tenant-primary)' }} />
                   <div>
                     <p className="text-muted-foreground">Phone</p>
-                    <p>{hasPhone ? landlordData.phone : 'Not provided'}</p>
+                    {hasPhone ? (
+                      <button
+                        type="button"
+                        onClick={handleCall}
+                        className="underline underline-offset-2 hover:opacity-80"
+                        style={{ color: 'var(--tenant-primary)' }}
+                      >
+                        {landlordData.phone}
+                      </button>
+                    ) : (
+                      <p>Not provided</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Mail className="w-4 h-4" style={{ color: 'var(--tenant-primary)' }} />
-                  <div>
+                  <Mail className="w-4 h-4 shrink-0" style={{ color: 'var(--tenant-primary)' }} />
+                  <div className="min-w-0">
                     <p className="text-muted-foreground">Email</p>
-                    <p>{landlordData.email}</p>
+                    {mailHref ? (
+                      <a
+                        href={mailHref}
+                        className="underline underline-offset-2 hover:opacity-80 break-all"
+                        style={{ color: 'var(--tenant-primary)' }}
+                      >
+                        {landlordData.email}
+                      </a>
+                    ) : (
+                      <p>Not provided</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
