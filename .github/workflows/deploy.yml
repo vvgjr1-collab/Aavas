@@ -63,6 +63,12 @@ jobs:
       - name: Rent receipt tests
         run: npm run test:receipt
 
+      # A tel: or mailto: built wrong looks identical on screen - the button
+      # is enabled, the number is shown, and pressing it does nothing. Only
+      # asserting on the built string catches that.
+      - name: Contact link tests
+        run: npm run test:contact
+
       - name: Build
         run: npm run build
         env:
