@@ -163,3 +163,46 @@ own. The **service_role key bypasses RLS entirely** and must never appear in a
 
 With neither set, the build still succeeds and the app runs in demo mode, so
 guest login keeps working with no backend at all.
+
+## Password recovery
+
+Two settings in the Supabase dashboard decide whether a reset link works, and
+both fail silently when they are wrong.
+
+**Redirect URLs** (Authentication → URL Configuration) must contain every
+origin the app is served from, or GoTrue quietly sends people to the Site URL
+instead of the reset screen:
+
+```
+https://vvgjr1-collab.github.io/Aavas/**
+http://localhost:3000/**
+```
+
+**The recovery email template** (Authentication → Email Templates → Reset
+Password) decides whether the link works away from the machine that asked for
+it. The default uses `{{ .ConfirmationURL }}`, which arrives as `?code=` - and
+a code can only be exchanged by the browser that requested the reset, because
+the verifier proving it is stored there. Someone who asks on a laptop and opens
+the email on their phone can never complete it.
+
+A token hash is checked against the server alone, so it works anywhere:
+
+```html
+<p>Follow this link to reset your password:</p>
+<p>
+  <a href="{{ .SiteURL }}/#/reset-password?token_hash={{ .TokenHash }}&type=recovery">
+    Reset my password
+  </a>
+</p>
+```
+
+The reset screen reads both shapes, so changing the template is safe and
+changes nothing for anyone already using a `?code=` link.
+
+Two related notes. The code verifier is deliberately kept in `localStorage`
+whatever the "remember me" choice - see `rememberAwareStorage` in
+`src/lib/supabase.ts` - because an emailed link always opens in a new tab and
+`sessionStorage` is per tab; `npm run test:auth-storage` pins that. And the
+**minimum password length and leaked-password protection** (Authentication →
+Policies) are still at their defaults; the app asks for eight characters with
+mixed case and a digit, and the backend should not be weaker than the form.

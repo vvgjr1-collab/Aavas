@@ -58,6 +58,7 @@
     "test:completion": "node tests/completion.test.mjs",
     "test:attention": "node tests/attention.test.mjs",
     "test:receipt": "node tests/receipt.test.mjs",
-    "test:contact": "node tests/contact.test.mjs"
+    "test:contact": "node tests/contact.test.mjs",
+    "test:auth-storage": "node tests/authStorage.test.mjs"
   }
 }

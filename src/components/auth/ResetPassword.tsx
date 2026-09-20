@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { updatePassword } from '../../lib/auth';
+import { friendlyAuthError, updatePassword } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 
 const MIN_LENGTH = 8;
@@ -21,6 +21,25 @@ const MIN_LENGTH = 8;
  * thing standing between a person and "password".
  */
 const STRONG = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+
+/**
+ * The link's parameters, from wherever they landed.
+ *
+ * A PKCE redirect puts them in the query string, before the '#'. A link built
+ * from the email template with {{ .TokenHash }} points straight at the route,
+ * which puts them after it. Reading both means the screen does not depend on
+ * which template the project happens to be using.
+ */
+function linkParams(): URLSearchParams {
+  const merged = new URLSearchParams(window.location.search);
+  const afterRoute = window.location.hash.split('?')[1];
+  if (afterRoute) {
+    for (const [key, value] of new URLSearchParams(afterRoute)) {
+      if (!merged.has(key)) merged.set(key, value);
+    }
+  }
+  return merged;
+}
 
 /**
  * The other end of a recovery email.
@@ -47,9 +66,9 @@ export function ResetPassword({ onDone }: { onDone: () => void }) {
       return;
     }
 
-    // Supabase reports a refused link in the query string rather than by
-    // throwing, so read that before waiting for a session that will not come.
-    const params = new URLSearchParams(window.location.search);
+    // Supabase reports a refused link in the URL rather than by throwing, so
+    // read that before waiting for a session that will not come.
+    const params = linkParams();
     const described = params.get('error_description') ?? params.get('error');
     if (described) {
       setState('invalid');
@@ -63,6 +82,12 @@ export function ResetPassword({ onDone }: { onDone: () => void }) {
       settled = true;
       setState('ready');
     };
+    const refuse = (message: string) => {
+      if (settled) return;
+      settled = true;
+      setState('invalid');
+      setLinkError(message);
+    };
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) succeed();
@@ -72,15 +97,40 @@ export function ResetPassword({ onDone }: { onDone: () => void }) {
       if (data.session) succeed();
     });
 
+    // A token_hash link is the one that works from anywhere.
+    //
+    // The ?code= link cannot: exchanging it needs the verifier stored in the
+    // browser that asked for the reset, so opening the email on a phone after
+    // asking on a laptop can never work. A hash is verified against the
+    // server alone, so it does not care where it is opened. Whether one
+    // arrives depends on the project's email template - see "Password
+    // recovery" in docs/database.md.
+    const tokenHash = params.get('token_hash');
+    if (tokenHash) {
+      supabase.auth
+        .verifyOtp({ type: 'recovery', token_hash: tokenHash })
+        .then(({ data, error }) => {
+          if (data?.session) succeed();
+          else if (error) refuse(friendlyAuthError(error.message));
+        })
+        .catch(() => refuse('That reset link could not be checked. Request a new one.'));
+    }
+
     // The exchange is a network round trip; give it a moment before deciding
     // the link is bad.
-    const timer = window.setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        setState('invalid');
-        setLinkError('This link has expired, or it was opened in a different browser.');
-      }
-    }, 6000);
+    // Naming the likely cause matters more than being brief here. "Invalid
+    // link" sends somebody to request another one and hit exactly the same
+    // wall, because the usual reason is not the link at all - it is that the
+    // email was opened somewhere other than where the reset was asked for.
+    const timer = window.setTimeout(
+      () =>
+        refuse(
+          'This link has to be opened in the same browser you requested it from. ' +
+            'If you asked for it on another device, open this email there instead - ' +
+            'or request a new link from this browser. It may also simply have expired.',
+        ),
+      6000,
+    );
 
     return () => {
       sub.subscription.unsubscribe();

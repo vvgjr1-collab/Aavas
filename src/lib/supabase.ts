@@ -82,6 +82,15 @@ export function setRememberMe(remember: boolean): void {
 }
 
 /**
+ * The PKCE code verifier, under any of the keys it is filed as.
+ *
+ * supabase-js uses `<storageKey>-code-verifier`, a per-flow
+ * `<storageKey>-flow-<id>-code-verifier`, and an index of those. All three end
+ * the same way.
+ */
+const isPkceVerifier = (key: string): boolean => key.endsWith('-code-verifier');
+
+/**
  * Routes the session to whichever store the choice implies, and reads from
  * both - so an existing remembered session is still found, and a session that
  * was not remembered is never left behind in localStorage.
@@ -90,6 +99,25 @@ const rememberAwareStorage = {
   getItem: (key: string): string | null =>
     store('session')?.getItem(key) ?? store('local')?.getItem(key) ?? memory.get(key) ?? null,
   setItem: (key: string, value: string): void => {
+    // The code verifier is not a session, and the rule for sessions breaks it.
+    //
+    // It is written when a recovery link is *requested* and read when that
+    // link is *opened* - and a link in an email always opens in a new tab.
+    // sessionStorage is per tab, so for anyone who had unticked "remember me"
+    // the verifier was gone by the time they arrived, every time, on the same
+    // machine. Without it supabase-js does not even recognise the callback,
+    // so the screen waited for a session that was never coming and called the
+    // link invalid.
+    //
+    // It goes to localStorage whatever the choice: it is short-lived, it is
+    // useless without the emailed code, and supabase-js deletes it the moment
+    // the code is exchanged.
+    if (isPkceVerifier(key)) {
+      const target = store('local') ?? store('session');
+      if (target) target.setItem(key, value);
+      else memory.set(key, value);
+      return;
+    }
     const remember = isRemembered();
     const target = store(remember ? 'local' : 'session');
     const other = store(remember ? 'session' : 'local');
